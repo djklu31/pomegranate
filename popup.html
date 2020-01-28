@@ -9,11 +9,24 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
-    <div class="container">
-      <h1>Pomegranate</h1>
-      <input id="address-box" placeholder="Type in URLs to block" type="text" />
-      <button id="add-url-btn" class="btn btn-primary">+</button>
-      <ul id="addresses-list"></ul>
+    <div id="container" class="container">
+      <div id="inner">
+        <h2>Pomegranate</h2>
+        <div id="timerDisplay">30</div>
+        <div>
+          <input id="timer" name="timer" placeholder="Timer Length" />
+        </div>
+        <div>
+          <input
+            id="address-box"
+            placeholder="Type in URLs to block"
+            type="text"
+          />
+          <button id="add-url-btn" class="btn btn-primary">+</button>
+        </div>
+        <ul id="addresses-list"></ul>
+        <button id="block-sites-btn" class="btn btn-danger"></button>
+      </div>
     </div>
     <script src="popup.js"></script>
   </body>

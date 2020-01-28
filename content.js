@@ -1,3 +1,27 @@
-chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-  console.log(request.greeting);
-});
+chrome.runtime.onMessage.addListener(function(
+  request,
+  sender,
+  sendResponse
+) {});
+
+window.onload = function() {
+  chrome.runtime.sendMessage({ action: "getAddressesForContent" }, function(
+    response
+  ) {
+    chrome.storage.sync.get(["timerStarted"], function(result) {
+      if (result.timerStarted !== undefined) {
+        if (result.timerStarted) {
+          let addresses = JSON.parse(response.msg);
+          console.log(location.href);
+          for (address of addresses) {
+            if (location.href === address) {
+              window.location = "http://www.puppies.com";
+            }
+          }
+        }
+      } else {
+        chrome.storage.sync.set({ timerStarted: false });
+      }
+    });
+  });
+};
