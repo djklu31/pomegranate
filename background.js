@@ -11,6 +11,13 @@ window.onload = function() {
 };
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
+  if (request.action === "getTimeLeft") {
+    sendResponse({ timeLeft: currentTime });
+  }
+  return true;
+});
+
+chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "addURL") {
     // chrome.storage.sync.get(["addresses"], function(result) {
     //   let addresses = [];
@@ -44,30 +51,29 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
     }
   } else if (request.action === "getAddressesForContent") {
     sendResponse({ msg: JSON.stringify(addresses) });
-  } else if (request.action === "startTimer") {
+  } else if (request.action === "toggleTimer") {
     chrome.storage.sync.get(["timerStarted"], function(result) {
       if (!result.timerStarted) {
-        startTimer(1000, request.msg, sendResponse);
+        startTimer(1000, parseInt(request.msg) * 60, sendResponse);
+        sendResponse({ msg: "timerStarted" });
       } else {
         stopTimer();
+        sendResponse({ msg: "timerStopped" });
       }
+      chrome.storage.sync.set({ timerStarted: !result.timerStarted });
     });
-  } else if (request.action === "getTimeLeft") {
-    sendResponse({ msg: currentTime });
   }
   return true;
 });
 
 function startTimer(speed, length, sendResponse) {
   timer = setInterval(function() {
-    currentTime = length;
     length = length - 1;
+    currentTime = length;
     if (length === 0) {
       clearInterval(timer);
       alert("DONE");
-      chrome.storage.sync.set({ timerStarted: false }, function() {
-        sendResponse({ msg: "timerExpired" });
-      });
+      chrome.storage.sync.set({ timerStarted: false });
     }
   }, speed);
 }

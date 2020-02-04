@@ -1,6 +1,7 @@
 let addURLBtn = document.getElementById("add-url-btn");
 let parentList = document.getElementById("addresses-list");
 let blockSitesBtn = document.getElementById("block-sites-btn");
+let timer;
 // addressBox.addEventListener("keyup", function(e) {
 // chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
 //   chrome.tabs.sendMessage(tabs[0].id, { greeting: addressBox.value });
@@ -18,7 +19,11 @@ window.onload = function() {
     if (result.timerStarted) {
       //get from background script
       chrome.runtime.sendMessage({ action: "getTimeLeft" }, function(response) {
-        console.log(response.msg);
+        console.log(response);
+        let currentTimeLeft = parseInt(response.timeLeft);
+        console.log(response.timeLeft);
+
+        getMockTimer(currentTimeLeft, "get");
       });
 
       document.getElementById("block-sites-btn").innerText = "Stop Timer";
@@ -94,11 +99,12 @@ addURLBtn.addEventListener("click", function() {
 blockSitesBtn.addEventListener("click", function() {
   chrome.storage.sync.get(["timerStarted"], function(result) {
     if (result.timerStarted !== undefined) {
-      chrome.storage.sync.set({ timerStarted: !result.timerStarted });
       if (!result.timerStarted) {
         document.getElementById("block-sites-btn").innerText = "Stop Timer";
+        // getTimeLeft();
       } else {
         document.getElementById("block-sites-btn").innerText = "Start Timer";
+        // stopTimer();
       }
     } else {
       chrome.storage.sync.set({ timerStarted: false });
@@ -106,10 +112,17 @@ blockSitesBtn.addEventListener("click", function() {
   });
 
   chrome.runtime.sendMessage(
-    { action: "startTimer", msg: document.getElementById("timer").value },
+    { action: "toggleTimer", msg: document.getElementById("timer").value },
     function(response) {
-      console.log(typeof response.msg);
-      if (response.msg === "timerExpired") {
+      console.log(response);
+      if (response.msg === "timerStarted") {
+        getMockTimer(
+          parseInt(document.getElementById("timer").value) * 60,
+          "start"
+        );
+        document.getElementById("block-sites-btn").innerText = "Stop Timer";
+      } else if (response.msg === "timerStopped") {
+        stopTimer();
         document.getElementById("block-sites-btn").innerText = "Start Timer";
       }
     }
@@ -121,4 +134,90 @@ function addToList(addresses) {
   let ul = document.getElementById("addresses-list");
   li.innerHTML = `${addresses} <button class="button">-</button>`;
   ul.appendChild(li);
+}
+
+function getMockTimer(currentTimeLeft, action) {
+  // document.getElementById(
+  //   "timerDisplay"
+  // ).innerHTML = `<h3>${currentTimeLeft}</h3>`;
+
+  convertToMinutes(currentTimeLeft, action);
+
+  // timer = setInterval(function() {
+  //   currentTimeLeft = currentTimeLeft - 1;
+  //   document.getElementById(
+  //     "timerDisplay"
+  //   ).innerHTML = `<h3>${currentTimeLeft}</h3>`;
+  //   if (currentTimeLeft <= 0) {
+  //     clearInterval(timer);
+  //     document.getElementById("timerDisplay").innerHTML = "";
+  //     document.getElementById("block-sites-btn").innerText = "Start Timer";
+  //   }
+  // }, 1000);
+}
+
+function convertToMinutes(currentTimeLeft, action) {
+  let minutes = Math.floor(currentTimeLeft / 60);
+  let seconds = currentTimeLeft % 60;
+  let paddedSeconds;
+  let paddedMinutes;
+
+  if (action === "start") {
+    if (seconds < 10) {
+      paddedSeconds = "0" + seconds;
+    } else {
+      paddedSeconds = seconds;
+    }
+
+    if (minutes < 10) {
+      paddedMinutes = "0" + minutes;
+    } else {
+      paddedMinutes = minutes;
+    }
+
+    document.getElementById(
+      "timerDisplay"
+    ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+
+    paddedMinutes -= 1;
+  }
+
+  timer = setInterval(function() {
+    if (seconds <= 0) {
+      if (minutes <= 0) {
+        console.log("timeout");
+        clearInterval(timer);
+        document.getElementById("timerDisplay").innerHTML = "";
+        document.getElementById("block-sites-btn").innerText = "Start Timer";
+      }
+
+      minutes = minutes - 1;
+      seconds = 59;
+    }
+
+    if (seconds < 10) {
+      paddedSeconds = "0" + seconds;
+    } else {
+      paddedSeconds = seconds;
+    }
+
+    if (minutes < 10) {
+      paddedMinutes = "0" + minutes;
+    } else {
+      paddedMinutes = minutes;
+    }
+    console.log(`${paddedMinutes}:${paddedSeconds}`);
+    document.getElementById(
+      "timerDisplay"
+    ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+
+    seconds -= 1;
+  }, 1000);
+}
+
+function getPaddedZero() {}
+
+function stopTimer() {
+  clearInterval(timer);
+  document.getElementById("timerDisplay").innerHTML = "";
 }
