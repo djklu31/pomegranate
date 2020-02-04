@@ -161,40 +161,39 @@ function convertToMinutes(currentTimeLeft, action) {
   let seconds = currentTimeLeft % 60;
   let paddedSeconds;
   let paddedMinutes;
+  let timerStopped = false;
 
-  if (action === "start") {
-    if (seconds < 10) {
-      paddedSeconds = "0" + seconds;
-    } else {
-      paddedSeconds = seconds;
-    }
-
-    if (minutes < 10) {
-      paddedMinutes = "0" + minutes;
-    } else {
-      paddedMinutes = minutes;
-    }
-
-    document.getElementById(
-      "timerDisplay"
-    ).innerText = `${paddedMinutes}:${paddedSeconds}`;
-
-    paddedMinutes -= 1;
+  if (seconds < 10) {
+    paddedSeconds = "0" + seconds;
+  } else {
+    paddedSeconds = seconds;
   }
 
+  if (minutes < 10) {
+    paddedMinutes = "0" + minutes;
+  } else {
+    paddedMinutes = minutes;
+  }
+
+  document.getElementById(
+    "timerDisplay"
+  ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+
   timer = setInterval(function() {
-    if (seconds <= 0) {
-      if (minutes <= 0) {
+    seconds -= 1;
+
+    if (seconds < 0) {
+      minutes = minutes - 1;
+      seconds = 59;
+
+      if (minutes < 0) {
         console.log("timeout");
         clearInterval(timer);
         document.getElementById("timerDisplay").innerHTML = "";
         document.getElementById("block-sites-btn").innerText = "Start Timer";
+        timerStopped = true;
       }
-
-      minutes = minutes - 1;
-      seconds = 59;
     }
-
     if (seconds < 10) {
       paddedSeconds = "0" + seconds;
     } else {
@@ -206,16 +205,14 @@ function convertToMinutes(currentTimeLeft, action) {
     } else {
       paddedMinutes = minutes;
     }
-    console.log(`${paddedMinutes}:${paddedSeconds}`);
-    document.getElementById(
-      "timerDisplay"
-    ).innerText = `${paddedMinutes}:${paddedSeconds}`;
 
-    seconds -= 1;
+    if (!timerStopped) {
+      document.getElementById(
+        "timerDisplay"
+      ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+    }
   }, 1000);
 }
-
-function getPaddedZero() {}
 
 function stopTimer() {
   clearInterval(timer);
