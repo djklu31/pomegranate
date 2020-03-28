@@ -2,13 +2,14 @@ console.log("background running");
 let addresses = [];
 let timer;
 let currentTime;
+let devMode = true;
 
-window.onload = function() {
-  chrome.storage.sync.get(["addresses"], function(result) {
-    console.log(result);
-    addresses = JSON.parse(result.addresses);
-  });
-};
+// window.onload = function() {
+chrome.storage.sync.get(["addresses"], function(result) {
+  console.log(result);
+  addresses = JSON.parse(result.addresses);
+});
+// };
 
 chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   if (request.action === "getTimeLeft") {
@@ -54,45 +55,65 @@ chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
   } else if (request.action === "toggleTimer") {
     chrome.storage.sync.get(["timerStarted"], function(result) {
       if (!result.timerStarted) {
-        startTimer(1000, parseInt(request.msg) * 60, sendResponse);
+        if (devMode) {
+          startTimer(1000, parseInt(request.msg), sendResponse);
+        } else {
+          startTimer(1000, parseInt(request.msg) * 60, sendResponse);
+        }
         sendResponse({ msg: "timerStarted" });
       } else {
         stopTimer();
         sendResponse({ msg: "timerStopped" });
       }
-      chrome.storage.sync.set({ timerStarted: !result.timerStarted });
     });
   }
   return true;
 });
 
+function timerEnded() {
+  let notifOptions = {
+    type: "progress",
+    iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
+    title: "Timer Ended",
+    message: "Time for a break?",
+    buttons: [{ title: "Start Break" }, { title: "Cancel" }]
+  };
+  chrome.notifications.create(notifOptions, function(id) {
+    chrome.notifications.onButtonClicked.addListener(function(notifId, btnIdx) {
+      if (notifId === id) {
+        if (btnIdx === 0) {
+          startBreak();
+        }
+      }
+    });
+  });
+  window.open("/html/breakNotifPage.html");
+}
+
 function startTimer(speed, length, sendResponse) {
+  chrome.storage.sync.set({ timerStarted: true });
   timer = setInterval(function() {
     length = length - 1;
     currentTime = length;
     if (length === 0) {
-      clearInterval(timer);
-      alert("DONE");
-      chrome.storage.sync.set({ timerStarted: false });
+      stopTimer();
+      timerEnded();
     }
   }, speed);
 }
 
-function stopTimer() {
-  clearInterval(timer);
+function startBreak() {
+  chrome.storage.sync.get(["breakLength"], function(result) {
+    console.log(result.breakLength);
+    if (devMode) {
+      startTimer(1000, parseInt(result.breakLength), sendResponse);
+    } else {
+      startTimer(1000, parseInt(result.breakLength) * 60, sendResponse);
+    }
+  });
 }
 
-// function setStorage(sendResponse, action) {
-//   try {
-//     chrome.storage.sync.set(
-//       { addresses: JSON.stringify(addresses) },
-//       function() {
-//         sendResponse({ msg: `success ${action} url` });
-//         return true;
-//       }
-//     );
-//   } catch (error) {
-//     sendResponse({ msg: `error ${action} url` });
-//     return true;
-//   }
-// }
+function stopTimer() {
+  chrome.storage.sync.set({ timerStarted: false });
+  clearInterval(timer);
+}

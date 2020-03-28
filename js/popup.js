@@ -1,50 +1,52 @@
 let addURLBtn = document.getElementById("add-url-btn");
 let parentList = document.getElementById("addresses-list");
 let blockSitesBtn = document.getElementById("block-sites-btn");
+// let saveSettingsBtn = document.getElementById("save-settings-btn");
+let settingsBtn = document.getElementById("settings-btn");
 let timer;
+let devMode = false;
 // addressBox.addEventListener("keyup", function(e) {
 // chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
 //   chrome.tabs.sendMessage(tabs[0].id, { greeting: addressBox.value });
 // });
 // });
-window.onload = function() {
-  chrome.storage.sync.get(["addresses"], function(result) {
-    let addresses = JSON.parse(result.addresses);
-    for (address of addresses) {
-      addToList(address);
-    }
-  });
+// window.onload = function() {
+chrome.storage.sync.get(["addresses"], function(result) {
+  let addresses = JSON.parse(result.addresses);
+  for (address of addresses) {
+    addToList(address);
+  }
+});
 
-  chrome.storage.sync.get(["timerStarted"], function(result) {
-    if (result.timerStarted) {
-      //get from background script
-      chrome.runtime.sendMessage({ action: "getTimeLeft" }, function(response) {
-        console.log(response);
-        let currentTimeLeft = parseInt(response.timeLeft);
-        console.log(response.timeLeft);
+chrome.storage.sync.get(["timerStarted"], function(result) {
+  if (result.timerStarted) {
+    //get from background script
+    chrome.runtime.sendMessage({ action: "getTimeLeft" }, function(response) {
+      console.log(response);
+      let currentTimeLeft = parseInt(response.timeLeft);
+      console.log(response.timeLeft);
 
-        getMockTimer(currentTimeLeft, "get");
-      });
+      convertToMinutes(currentTimeLeft);
+    });
 
-      document.getElementById("block-sites-btn").innerText = "Stop Timer";
-    } else {
-      document.getElementById("block-sites-btn").innerText = "Start Timer";
-    }
-  });
+    document.getElementById("block-sites-btn").innerText = "Stop Timer";
+  } else {
+    document.getElementById("block-sites-btn").innerText = "Start Timer";
+  }
+});
 
-  // chrome.runtime.sendMessage({ action: "getTimeLeft" }, function(response) {
-  //   if (response.msg === "success deleting url") {
-  //     var list = document.getElementsByTagName("li");
-  //     for (item of list) {
-  //       if (item.innerText === event.target.parentNode.innerText) {
-  //         item.parentNode.removeChild(item);
-  //       }
-  //     }
-  //   } else if (response.msg === "error deleting url") {
-  //     console.log("ERROR deleting URL (handle somehow)");
-  //   }
-  // });
-};
+// chrome.runtime.sendMessage({ action: "getTimeLeft" }, function(response) {
+//   if (response.msg === "success deleting url") {
+//     var list = document.getElementsByTagName("li");
+//     for (item of list) {
+//       if (item.innerText === event.target.parentNode.innerText) {
+//         item.parentNode.removeChild(item);
+//       }
+//     }
+//   } else if (response.msg === "error deleting url") {
+//
+// });
+// };
 // getStorageBtn.addEventListener("click", function() {
 //   chrome.storage.sync.get(["addresses"], function(result) {
 //     console.log(`Got addresses from storage: ${result.addresses}`);
@@ -71,6 +73,11 @@ parentList.addEventListener("click", function(event) {
     );
   }
 });
+
+// saveSettingsBtn.addEventListener("click", function() {
+//   let breakLength = document.getElementById("break-length").value;
+//   chrome.storage.sync.set({ breakLength: breakLength });
+// });
 
 addURLBtn.addEventListener("click", function() {
   let addressBox = document.getElementById("address-box");
@@ -111,23 +118,43 @@ blockSitesBtn.addEventListener("click", function() {
     }
   });
 
-  chrome.runtime.sendMessage(
-    { action: "toggleTimer", msg: document.getElementById("timer").value },
-    function(response) {
-      console.log(response);
-      if (response.msg === "timerStarted") {
-        getMockTimer(
-          parseInt(document.getElementById("timer").value) * 60,
-          "start"
-        );
-        document.getElementById("block-sites-btn").innerText = "Stop Timer";
-      } else if (response.msg === "timerStopped") {
-        stopTimer();
-        document.getElementById("block-sites-btn").innerText = "Start Timer";
-      }
+  chrome.storage.sync.get(["timerLength"], function(result) {
+    if (result.timerLength !== undefined) {
+      triggerTimer(result.timerLength);
+    } else {
+      triggerTimer(20);
     }
-  );
+  });
 });
+
+settingsBtn.addEventListener("click", function() {
+  window.open("/html/settings.html");
+});
+
+function triggerTimer(length) {
+  chrome.runtime.sendMessage({ action: "toggleTimer", msg: length }, function(
+    response
+  ) {
+    console.log(response);
+    if (response.msg === "timerStarted") {
+      if (devMode) {
+        convertToMinutes(parseInt(length));
+      } else {
+        convertToMinutes(parseInt(length) * 60);
+      }
+      document.getElementById("block-sites-btn").innerText = "Stop Timer";
+    } else if (response.msg === "timerStopped") {
+      stopTimer();
+      document.getElementById("block-sites-btn").innerText = "Start Timer";
+    }
+  });
+}
+
+function startBreak() {
+  let breakLength = document.getElementById("break-length");
+  alert("break starting");
+  convertToMinutes(breakLength * 60);
+}
 
 function addToList(addresses) {
   let li = document.createElement("li");
@@ -136,27 +163,7 @@ function addToList(addresses) {
   ul.appendChild(li);
 }
 
-function getMockTimer(currentTimeLeft, action) {
-  // document.getElementById(
-  //   "timerDisplay"
-  // ).innerHTML = `<h3>${currentTimeLeft}</h3>`;
-
-  convertToMinutes(currentTimeLeft, action);
-
-  // timer = setInterval(function() {
-  //   currentTimeLeft = currentTimeLeft - 1;
-  //   document.getElementById(
-  //     "timerDisplay"
-  //   ).innerHTML = `<h3>${currentTimeLeft}</h3>`;
-  //   if (currentTimeLeft <= 0) {
-  //     clearInterval(timer);
-  //     document.getElementById("timerDisplay").innerHTML = "";
-  //     document.getElementById("block-sites-btn").innerText = "Start Timer";
-  //   }
-  // }, 1000);
-}
-
-function convertToMinutes(currentTimeLeft, action) {
+function convertToMinutes(currentTimeLeft) {
   let minutes = Math.floor(currentTimeLeft / 60);
   let seconds = currentTimeLeft % 60;
   let paddedSeconds;
