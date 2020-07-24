@@ -1,0 +1,16 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "chrome",
+      "request": "attach",
+      "name": "Chrome Extension debugging",
+      "port": 9222,
+      "url": "http://localhost:9222/devtools/inspector.html?ws=localhost:9222/devtools/page/3508F93837C85879138EFE3D1922C1D7";
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}
