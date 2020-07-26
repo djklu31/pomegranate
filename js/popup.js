@@ -4,6 +4,7 @@ let blockSitesBtn = document.getElementById("block-sites-btn");
 // let saveSettingsBtn = document.getElementById("save-settings-btn");
 let settingsBtn = document.getElementById("settings-btn");
 let pauseResumeBtn = document.getElementById("pause-resume-btn");
+let resetTimerBtn = document.getElementById("reset-timer-btn");
 let timer;
 let devMode = false;
 let globalTimer;
@@ -13,14 +14,19 @@ let globalTimer;
 // });
 // });
 // window.onload = function() {
+checkDefaultSettings();
+zeroOutDisplay();
+
 chrome.storage.sync.get(["addresses"], function (result) {
-  let addresses = JSON.parse(result.addresses);
-  for (address of addresses) {
-    addToList(address);
+  if (result.addresses !== undefined) {
+    let addresses = JSON.parse(result.addresses);
+    for (address of addresses) {
+      addToList(address);
+    }
   }
 });
 
-chrome.storage.sync.get(["timerStarted"], function (result) {
+chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
   if (result.timerStarted) {
     //get from background script
     chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (response) {
@@ -42,8 +48,23 @@ chrome.storage.sync.get(["timerStarted"], function (result) {
     document.getElementById("block-sites-btn").innerText = "Stop Timer";
     document.getElementById("pause-resume-btn").disabled = false;
   } else {
-    document.getElementById("block-sites-btn").innerText = "Start Timer";
-    document.getElementById("pause-resume-btn").disabled = true;
+    if (result.onBreak) {
+      document.getElementById("block-sites-btn").innerText = "Start Break";
+      document.getElementById("pause-resume-btn").disabled = true;
+    } else {
+      document.getElementById("block-sites-btn").innerText = "Start Timer";
+      document.getElementById("pause-resume-btn").disabled = true;
+    }
+  }
+});
+
+chrome.storage.sync.get(["completedPomodoros"], function (result) {
+  if (result.completedPomodoros === undefined) {
+    chrome.storage.sync.set({ completedPomodoros: 0 });
+    document.getElementById("completed-pomodoros-display").innerText = 0;
+  } else {
+    document.getElementById("completed-pomodoros-display").innerText =
+      result.completedPomodoros;
   }
 });
 
@@ -145,15 +166,21 @@ addURLBtn.addEventListener("click", function () {
 });
 
 blockSitesBtn.addEventListener("click", function () {
-  chrome.storage.sync.get(["timerStarted"], function (result) {
+  chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
     if (result.timerStarted !== undefined) {
       if (!result.timerStarted) {
         document.getElementById("block-sites-btn").innerText = "Stop Timer";
         document.getElementById("pause-resume-btn").disabled = false;
         // getTimeLeft();
       } else {
-        document.getElementById("block-sites-btn").innerText = "Start Timer";
-        document.getElementById("pause-resume-btn").disabled = true;
+        if (result.onBreak) {
+          document.getElementById("block-sites-btn").innerText = "Start Break";
+          document.getElementById("pause-resume-btn").disabled = true;
+        } else {
+          document.getElementById("block-sites-btn").innerText = "Start Timer";
+          document.getElementById("pause-resume-btn").disabled = true;
+        }
+
         // stopTimer();
       }
     } else {
@@ -163,20 +190,38 @@ blockSitesBtn.addEventListener("click", function () {
 
   chrome.storage.sync.get(["timerLength"], function (result) {
     if (result.timerLength !== undefined) {
-      triggerTimer(result.timerLength);
+      if (result.onBreak) {
+        triggerTimer(result.timerLength, false, false, startBreak);
+      } else {
+        triggerTimer(result.timerLength);
+      }
     } else {
-      triggerTimer(20);
+      if (result.onBreak) {
+        triggerTimer(20, false, true);
+      } else {
+        triggerTimer(20);
+      }
     }
   });
+});
+
+resetTimerBtn.addEventListener("click", function () {
+  triggerTimer(null, false, true);
 });
 
 settingsBtn.addEventListener("click", function () {
   window.open("/html/settings.html");
 });
 
-function triggerTimer(length, isResume) {
+function triggerTimer(length, isResume, isReset, startBreak) {
   chrome.runtime.sendMessage(
-    { action: "toggleTimer", msg: length, isResume: isResume },
+    {
+      action: "toggleTimer",
+      msg: length,
+      isResume: isResume,
+      isReset: isReset,
+      startBreak: startBreak,
+    },
     function (response) {
       console.log(response);
       if (response.msg === "timerStarted") {
@@ -187,6 +232,12 @@ function triggerTimer(length, isResume) {
         }
         document.getElementById("block-sites-btn").innerText = "Stop Timer";
         document.getElementById("pause-resume-btn").disabled = false;
+      } else if (response.msg === "timerReset") {
+        stopTimer();
+        document.getElementById("block-sites-btn").innerText = "Start Timer";
+        document.getElementById("pause-resume-btn").innerText = "Pause Timer";
+        document.getElementById("pause-resume-btn").disabled = true;
+        document.getElementById("completed-pomodoros-display").innerText = 0;
       } else if (response.msg === "timerStopped") {
         stopTimer();
         document.getElementById("block-sites-btn").innerText = "Start Timer";
@@ -232,7 +283,7 @@ function convertToMinutes(currentTimeLeft) {
   }
 
   document.getElementById(
-    "timerDisplay"
+    "timer-display"
   ).innerText = `${paddedMinutes}:${paddedSeconds}`;
 
   timer = setInterval(function () {
@@ -245,7 +296,15 @@ function convertToMinutes(currentTimeLeft) {
 
       if (minutes < 0) {
         stopTimer();
-        document.getElementById("timerDisplay").innerHTML = "";
+        chrome.storage.sync.get(["isBreak", "completedPomodoros"], function (
+          result
+        ) {
+          if (!result.isBreak) {
+            document.getElementById("completed-pomodoros-display").innerText =
+              result.completedPomodoros + 1;
+          }
+        });
+        document.getElementById("timer-display").innerHTML = "";
         document.getElementById("block-sites-btn").innerText = "Start Timer";
         timerStopped = true;
       }
@@ -264,7 +323,7 @@ function convertToMinutes(currentTimeLeft) {
 
     if (!timerStopped) {
       document.getElementById(
-        "timerDisplay"
+        "timer-display"
       ).innerText = `${paddedMinutes}:${paddedSeconds}`;
     }
   }, 1000);
@@ -293,13 +352,60 @@ function displayPausedTime(currentTimeLeft) {
   }
 
   document.getElementById(
-    "timerDisplay"
+    "timer-display"
   ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+}
+
+function zeroOutDisplay() {
+  document.getElementById("timer-display").innerText = "00:00";
 }
 
 function stopTimer() {
   for (i = timer; i >= 0; i--) {
     clearInterval(i);
   }
-  document.getElementById("timerDisplay").innerHTML = "";
+  zeroOutDisplay();
+}
+
+//if settings don't exist, set default values
+function checkDefaultSettings() {
+  chrome.storage.sync.get(["breakLength"], function (result) {
+    if (result.breakLength === undefined) {
+      chrome.storage.sync.set({
+        breakLength: 5,
+      });
+    }
+  });
+
+  chrome.storage.sync.get(["timerLength"], function (result) {
+    if (result.timerLength === undefined) {
+      chrome.storage.sync.set({
+        timerLength: 10,
+      });
+    }
+  });
+
+  chrome.storage.sync.get(["longBreakFreq"], function (result) {
+    if (result.longBreakFreq === undefined) {
+      chrome.storage.sync.set({
+        longBreakFreq: 10,
+      });
+    }
+  });
+
+  chrome.storage.sync.get(["longBreakLength"], function (result) {
+    if (result.longBreakAmt === undefined) {
+      chrome.storage.sync.set({
+        longBreakLength: 2,
+      });
+    }
+  });
+
+  chrome.storage.sync.get(["totalBreakAmt"], function (result) {
+    if (result.totalBreakAmt === undefined) {
+      chrome.storage.sync.set({
+        totalBreakAmt: 3,
+      });
+    }
+  });
 }

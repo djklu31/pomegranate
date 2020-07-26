@@ -12,9 +12,9 @@ chrome.storage.sync.get(["breakLength"], function (result) {
 chrome.storage.sync.get(["timerLength"], function (result) {
   if (result.timerLength === undefined) {
     chrome.storage.sync.set({
-      timerLength: 30,
+      timerLength: 20,
     });
-    document.getElementById("timer").value = 30;
+    document.getElementById("timer").value = 20;
   } else {
     document.getElementById("timer").value = result.timerLength;
   }
