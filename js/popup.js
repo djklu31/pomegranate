@@ -5,9 +5,11 @@ let blockSitesBtn = document.getElementById("block-sites-btn");
 let settingsBtn = document.getElementById("settings-btn");
 let pauseResumeBtn = document.getElementById("pause-resume-btn");
 let resetTimerBtn = document.getElementById("reset-timer-btn");
+let statsBtn = document.getElementById("stats-btn");
 let timer;
 let devMode = false;
 let globalTimer;
+let instanceReset = false;
 // addressBox.addEventListener("keyup", function(e) {
 // chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
 //   chrome.tabs.sendMessage(tabs[0].id, { greeting: addressBox.value });
@@ -16,6 +18,13 @@ let globalTimer;
 // window.onload = function() {
 checkDefaultSettings();
 zeroOutDisplay();
+// $(document).ready(function () {
+//   $('[data-toggle="tooltip"]').tooltip();
+// });
+// $(function () {
+//   document.getElementById("stats-btn").setAttribute("title", "werrrrd");
+//   $("#stats-btn").tooltip();
+// });
 
 chrome.storage.sync.get(["addresses"], function (result) {
   if (result.addresses !== undefined) {
@@ -26,15 +35,35 @@ chrome.storage.sync.get(["addresses"], function (result) {
   }
 });
 
-chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
+chrome.storage.sync.get(["timerStarted", "onBreak", "pausedTime"], function (
+  result
+) {
   if (result.timerStarted) {
     //get from background script
     chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (response) {
       console.log(response);
-      let currentTimeLeft = parseInt(response.timeLeft);
-      console.log(response.timeLeft);
+      if (response.timeLeft === false && !result.pausedTime) {
+        document.getElementById("timer-display").innerText = "--:--";
 
-      chrome.storage.sync.get(["pausedTime"], function (result) {
+        setTimeout(function () {
+          chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (
+            response
+          ) {
+            let currentTimeLeft = parseInt(response.timeLeft);
+            // chrome.storage.sync.get(["pausedTime"], function (result) {
+            if (
+              result.pausedTime === "resumed" ||
+              result.pausedTime === undefined ||
+              result.pausedTime === null
+            ) {
+              convertToMinutes(currentTimeLeft);
+            }
+            // });
+          });
+        }, 1000);
+      } else {
+        let currentTimeLeft = parseInt(response.timeLeft);
+        // chrome.storage.sync.get(["pausedTime"], function (result) {
         if (
           result.pausedTime === "resumed" ||
           result.pausedTime === undefined ||
@@ -42,17 +71,29 @@ chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
         ) {
           convertToMinutes(currentTimeLeft);
         }
-      });
+        // });
+      }
     });
 
-    document.getElementById("block-sites-btn").innerText = "Stop Timer";
+    if (result.onBreak) {
+      document.getElementById("block-sites-btn").innerText = "Stop Break";
+    } else {
+      document.getElementById("block-sites-btn").innerText = "Stop Timer";
+    }
+
+    showTimer();
+    hideURLSection();
     document.getElementById("pause-resume-btn").disabled = false;
   } else {
     if (result.onBreak) {
       document.getElementById("block-sites-btn").innerText = "Start Break";
+      hideTimer();
+      showURLSection();
       document.getElementById("pause-resume-btn").disabled = true;
     } else {
       document.getElementById("block-sites-btn").innerText = "Start Timer";
+      hideTimer();
+      showURLSection();
       document.getElementById("pause-resume-btn").disabled = true;
     }
   }
@@ -102,7 +143,7 @@ chrome.storage.sync.get(["pausedTime"], function (result) {
 //Event Listeners
 parentList.addEventListener("click", function (event) {
   console.log(event);
-  if (event.target.tagName === "BUTTON") {
+  if (event.target.tagName === "A") {
     chrome.runtime.sendMessage(
       { msg: event.target.parentNode.innerText.trim(), action: "deleteURL" },
       function (response) {
@@ -111,6 +152,7 @@ parentList.addEventListener("click", function (event) {
           for (item of list) {
             if (item.innerText === event.target.parentNode.innerText) {
               item.parentNode.removeChild(item);
+              break;
             }
           }
         } else if (response.msg === "error deleting url") {
@@ -137,40 +179,66 @@ pauseResumeBtn.addEventListener("click", function (event) {
     chrome.runtime.sendMessage({
       msg: "pause",
       action: "togglePause",
+      pauseLength: globalTimer,
     });
   }
 });
 
-addURLBtn.addEventListener("click", function () {
-  let addressBox = document.getElementById("address-box");
-
-  chrome.runtime.sendMessage(
-    {
-      msg: addressBox.value,
-      action: "addURL",
-    },
-    function (response) {
-      if (response.msg === "success adding url") {
-        let addressBox = document.getElementById("address-box");
-        addToList(addressBox.value);
-        addressBox.value = "";
-      } else if (response.msg === "error adding url") {
-        console.log("ERROR adding URL (handle somehow)");
-      }
-    }
-  );
-
-  // chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-  //   chrome.tabs.sendMessage(tabs[0].id, { greeting: "hello" });
-  // });
+statsBtn.addEventListener("mouseover", function (event) {
+  // if (!instanceReset) {
+  chrome.storage.sync.get(["completedPomodoros", "breakCount"], function (
+    result
+  ) {
+    statsBtn.setAttribute(
+      "title",
+      `Completed Pomodoros: ${result.completedPomodoros} Completed Breaks: ${result.breakCount}`
+    );
+    statsBtn.setAttribute(
+      "data-original-title",
+      `Completed Pomodoros: ${result.completedPomodoros} Completed Breaks: ${result.breakCount}`
+    );
+    $("#stats-btn").tooltip("show");
+  });
 });
+
+function addURL(event) {
+  let addressBox = document.getElementById("address-box");
+  if (
+    (event.keyCode === 13 || event.type === "click") &&
+    addressBox.value !== ""
+  ) {
+    chrome.runtime.sendMessage(
+      {
+        msg: addressBox.value,
+        action: "addURL",
+      },
+      function (response) {
+        if (response.msg === "success adding url") {
+          let addressBox = document.getElementById("address-box");
+          addToList(addressBox.value);
+          addressBox.value = "";
+        } else if (response.msg === "error adding url") {
+          console.log("ERROR adding URL (handle somehow)");
+        }
+      }
+    );
+  }
+}
+
+addURLBtn.addEventListener("click", addURL);
+document.getElementById("address-box").addEventListener("keyup", addURL);
 
 blockSitesBtn.addEventListener("click", function () {
   chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
     if (result.timerStarted !== undefined) {
       if (!result.timerStarted) {
-        document.getElementById("block-sites-btn").innerText = "Stop Timer";
-        document.getElementById("pause-resume-btn").disabled = false;
+        if (result.onBreak) {
+          document.getElementById("block-sites-btn").innerText = "Stop Break";
+          document.getElementById("pause-resume-btn").disabled = true;
+        } else {
+          document.getElementById("block-sites-btn").innerText = "Stop Timer";
+          document.getElementById("pause-resume-btn").disabled = false;
+        }
         // getTimeLeft();
       } else {
         if (result.onBreak) {
@@ -188,16 +256,18 @@ blockSitesBtn.addEventListener("click", function () {
     }
   });
 
-  chrome.storage.sync.get(["timerLength"], function (result) {
+  chrome.storage.sync.get(["timerLength", "onBreak", "timerStarted"], function (
+    result
+  ) {
     if (result.timerLength !== undefined) {
-      if (result.onBreak) {
-        triggerTimer(result.timerLength, false, false, startBreak);
+      if (result.onBreak && !result.timerStarted) {
+        triggerTimer(result.timerLength, false, false, true);
       } else {
         triggerTimer(result.timerLength);
       }
     } else {
-      if (result.onBreak) {
-        triggerTimer(20, false, true);
+      if (result.onBreak && !result.timerStarted) {
+        triggerTimer(20, false, false, true);
       } else {
         triggerTimer(20);
       }
@@ -206,6 +276,7 @@ blockSitesBtn.addEventListener("click", function () {
 });
 
 resetTimerBtn.addEventListener("click", function () {
+  instanceReset = true;
   triggerTimer(null, false, true);
 });
 
@@ -224,23 +295,37 @@ function triggerTimer(length, isResume, isReset, startBreak) {
     },
     function (response) {
       console.log(response);
-      if (response.msg === "timerStarted") {
+      if (response.msg === "timerStarted" || response.msg === "breakStarted") {
         if (devMode || isResume) {
           convertToMinutes(parseInt(length));
         } else {
           convertToMinutes(parseInt(length) * 60);
         }
-        document.getElementById("block-sites-btn").innerText = "Stop Timer";
+        // document.getElementById("block-sites-btn").innerText = "Stop Timer";
+        showTimer();
+        hideURLSection();
         document.getElementById("pause-resume-btn").disabled = false;
       } else if (response.msg === "timerReset") {
         stopTimer();
+        hideTimer();
+        showURLSection();
         document.getElementById("block-sites-btn").innerText = "Start Timer";
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
         document.getElementById("completed-pomodoros-display").innerText = 0;
       } else if (response.msg === "timerStopped") {
         stopTimer();
-        document.getElementById("block-sites-btn").innerText = "Start Timer";
+        hideTimer();
+        showURLSection();
+        // chrome.storage.sync.get(["onBreak"], function (result) {
+        //   if (result.onBreak) {
+        //     document.getElementById("block-sites-btn").innerText =
+        //       "Start Break";
+        //   } else {
+        //     document.getElementById("block-sites-btn").innerText =
+        //       "Start Timer";
+        //   }
+        // });
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
       }
@@ -256,8 +341,9 @@ function startBreak() {
 
 function addToList(addresses) {
   let li = document.createElement("li");
+  li.setAttribute("class", "li-delete-url");
   let ul = document.getElementById("addresses-list");
-  li.innerHTML = `${addresses} <button class="button">-</button>`;
+  li.innerHTML = `<div id="delete-url"><a class="delete-btn">-</a>${addresses}</div>`;
   ul.appendChild(li);
 }
 
@@ -367,12 +453,46 @@ function stopTimer() {
   zeroOutDisplay();
 }
 
+function showTimer() {
+  document.getElementById("timer-container").style.display = "initial";
+  document.getElementById("reset-timer-btn").style.display = "none";
+  document.getElementById("pause-resume-btn").style.display = "initial";
+  document.getElementById("title-container").style.display = "none";
+  document.getElementById("toggle-address-list").style.display = "initial";
+  document.getElementById("break-status-icon").style.display = "initial";
+}
+
+function hideTimer() {
+  document.getElementById("timer-container").style.display = "none";
+  document.getElementById("break-status-icon").style.display = "none";
+  document.getElementById("reset-timer-btn").style.display = "initial";
+  document.getElementById("pause-resume-btn").style.display = "none";
+  document.getElementById("title-container").style.display = "flex";
+  document.getElementById("toggle-address-list").style.display = "none";
+}
+
+function showURLSection() {
+  document.getElementById("block-url-container").style.display = "initial";
+}
+
+function hideURLSection() {
+  document.getElementById("block-url-container").style.display = "none";
+}
+
 //if settings don't exist, set default values
 function checkDefaultSettings() {
   chrome.storage.sync.get(["breakLength"], function (result) {
     if (result.breakLength === undefined) {
       chrome.storage.sync.set({
         breakLength: 5,
+      });
+    }
+  });
+
+  chrome.storage.sync.get(["breakCount"], function (result) {
+    if (result.breakCount === undefined) {
+      chrome.storage.sync.set({
+        breakCount: 0,
       });
     }
   });
@@ -394,7 +514,7 @@ function checkDefaultSettings() {
   });
 
   chrome.storage.sync.get(["longBreakLength"], function (result) {
-    if (result.longBreakAmt === undefined) {
+    if (result.longBreakLength === undefined) {
       chrome.storage.sync.set({
         longBreakLength: 2,
       });

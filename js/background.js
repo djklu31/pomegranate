@@ -1,7 +1,7 @@
 console.log("background running");
 let addresses = [];
 let timer;
-let currentTime = 0;
+let currentTime = false;
 let devMode = true;
 
 chrome.storage.sync.get(["addresses"], function (result) {
@@ -37,9 +37,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     // });
   } else if (request.action === "deleteURL") {
     //remove the ending "hyphen"
-    let index = addresses.indexOf(
-      request.msg.substring(0, request.msg.length - 2)
-    );
+    let index = addresses.indexOf(request.msg.substring(2, request.msg.length));
     addresses.splice(index, 1);
 
     try {
@@ -52,21 +50,20 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     } catch (error) {
       sendResponse({ msg: `error deleting url` });
     }
-  } else if (request.action === "getAddressesForContent") {
-    sendResponse({ msg: JSON.stringify(addresses) });
   } else if (request.action === "toggleTimer") {
-    chrome.storage.sync.get(["timerStarted"], function (result) {
+    chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
       if (request.startBreak) {
         startBreak();
+        sendResponse({ msg: "breakStarted" });
       } else if (request.isReset) {
         stopTimer(timer);
-        chrome.storage.sync.set({ breakCount: null });
+        chrome.storage.sync.set({ breakCount: 0 });
         chrome.storage.sync.set({ pausedTime: null });
         chrome.storage.sync.set({ onBreak: false });
         chrome.storage.sync.set({ completedPomodoros: 0 });
         sendResponse({ msg: "timerReset" });
       } else if (!result.timerStarted || request.isResume) {
-        if (devMode || request.isResume) {
+        if (devMode) {
           startTimer(1000, parseInt(request.msg));
         } else {
           startTimer(1000, parseInt(request.msg) * 60);
@@ -75,13 +72,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
       } else {
         stopTimer(timer);
         chrome.storage.sync.set({ pausedTime: null });
-        chrome.storage.sync.set({ onBreak: false });
+        // if (!result.onBreak) {
+        //   chrome.storage.sync.set({ onBreak: false });
+        // }
         sendResponse({ msg: "timerStopped" });
       }
     });
   } else if (request.action === "togglePause") {
     if (request.msg === "pause") {
-      pauseTimer();
+      pauseTimer(request.pauseLength);
     } else {
       resumeTimer();
     }
@@ -95,7 +94,7 @@ function timerEnded() {
       chrome.storage.sync.set({ onBreak: false });
       let notifOptions = {
         type: "progress",
-        iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
+        iconUrl: "/img/pom-128.png",
         title: "Break Ended",
         message: "Ready to Resume?",
         buttons: [{ title: "Start Timer" }, { title: "Cancel" }],
@@ -109,7 +108,11 @@ function timerEnded() {
             if (btnIdx === 0) {
               chrome.storage.sync.get(["timerLength"], function (result) {
                 chrome.storage.sync.set({ onBreak: false });
-                startTimer(1000, result.timerLength);
+                if (devMode) {
+                  startTimer(1000, result.timerLength);
+                } else {
+                  startTimer(1000, result.timerLength * 60);
+                }
               });
             }
           }
@@ -151,6 +154,7 @@ function startTimer(speed, length) {
     currentTime = length;
     if (length <= 0) {
       chrome.storage.sync.set({ pausedTime: null });
+      chrome.storage.sync.set({ timerStarted: false });
       stopTimer(timer);
       timerEnded();
       chrome.storage.sync.get(["completedPomodoros", "onBreak"], function (
@@ -160,14 +164,16 @@ function startTimer(speed, length) {
           chrome.storage.sync.set({
             completedPomodoros: result.completedPomodoros + 1,
           });
+        } else {
+          recordBreak();
         }
       });
     }
   }, speed);
 }
 
-function pauseTimer() {
-  chrome.storage.sync.set({ pausedTime: currentTime });
+function pauseTimer(pauseLength) {
+  chrome.storage.sync.set({ pausedTime: pauseLength });
   console.log("paused: " + currentTime);
   stopTimer(timer, true);
 }
@@ -176,9 +182,9 @@ function resumeTimer() {
   chrome.storage.sync.get(["pausedTime"], function (result) {
     // stopTimer();
     if (devMode) {
-      startTimer(1000, parseInt(result.pausedTime) * 60);
-    } else {
       startTimer(1000, parseInt(result.pausedTime));
+    } else {
+      startTimer(1000, parseInt(result.pausedTime) * 60);
     }
     chrome.storage.sync.set({ pausedTime: "resumed" });
   });
@@ -217,19 +223,23 @@ function checkLongBreak(breakCount) {
 function startBreak() {
   chrome.storage.sync.get(["breakCount"], function (result) {
     let breakCount;
+    breakCount = result.breakCount + 1;
 
-    if (result.breakCount === undefined || result.breakCount === null) {
-      breakCount = 1;
-    } else {
-      breakCount = result.breakCount + 1;
-    }
-    chrome.storage.sync.set({ breakCount: breakCount });
     checkLongBreak(breakCount);
   });
 }
 
+function recordBreak() {
+  chrome.storage.sync.get(["breakCount"], function (result) {
+    let breakCount;
+    breakCount = result.breakCount + 1;
+
+    chrome.storage.sync.set({ breakCount: breakCount });
+  });
+}
+
 function stopTimer(timerId, dontReflect) {
-  currentTime = 0;
+  currentTime = false;
   if (!dontReflect) {
     chrome.storage.sync.set({ timerStarted: false });
   }

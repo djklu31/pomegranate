@@ -1,27 +1,21 @@
-chrome.runtime.onMessage.addListener(function(
-  request,
-  sender,
-  sendResponse
-) {});
-
-// window.onload = function() {
-chrome.runtime.sendMessage({ action: "getAddressesForContent" }, function(
+chrome.storage.sync.get(["addresses", "onBreak", "exclusiveMode"], function (
   response
 ) {
-  chrome.storage.sync.get(["timerStarted"], function(result) {
-    if (result.timerStarted !== undefined) {
-      if (result.timerStarted) {
-        let addresses = JSON.parse(response.msg);
-        console.log(location.href);
-        for (address of addresses) {
-          if (location.href === address) {
-            window.location = chrome.runtime.getURL("/html/pageBlocked.html");
+  if (!response.onBreak || response.exclusiveMode) {
+    chrome.storage.sync.get(["timerStarted"], function (result) {
+      if (result.timerStarted !== undefined || response.exclusiveMode) {
+        if (result.timerStarted || response.exclusiveMode) {
+          let addresses = JSON.parse(response.addresses);
+          console.log(location.href);
+          for (address of addresses) {
+            if (location.href.indexOf(address) !== -1) {
+              window.location = chrome.runtime.getURL("/html/pageBlocked.html");
+            }
           }
         }
+      } else {
+        chrome.storage.sync.set({ timerStarted: false });
       }
-    } else {
-      chrome.storage.sync.set({ timerStarted: false });
-    }
-  });
+    });
+  }
 });
-// };

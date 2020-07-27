@@ -20,6 +20,21 @@ chrome.storage.sync.get(["timerLength"], function (result) {
   }
 });
 
+chrome.storage.sync.get(["exclusiveMode"], function (result) {
+  if (result.exclusiveMode === undefined) {
+    chrome.storage.sync.set({
+      exclusiveMode: false,
+    });
+    document.getElementById("exclusive-mode-cb").checked = false;
+  } else {
+    if (result.exclusiveMode === false) {
+      document.getElementById("exclusive-mode-cb").checked = false;
+    } else {
+      document.getElementById("exclusive-mode-cb").checked = true;
+    }
+  }
+});
+
 chrome.storage.sync.get(["longBreakFreq"], function (result) {
   if (result.longBreakFreq === undefined) {
     chrome.storage.sync.set({
@@ -32,13 +47,13 @@ chrome.storage.sync.get(["longBreakFreq"], function (result) {
 });
 
 chrome.storage.sync.get(["longBreakLength"], function (result) {
-  if (result.longBreakAmt === undefined) {
+  if (result.longBreakLength === undefined) {
     chrome.storage.sync.set({
       longBreakLength: 2,
     });
     document.getElementById("long-break-length").value = 2;
   } else {
-    document.getElementById("long-break-length").value = result.longBreakAmt;
+    document.getElementById("long-break-length").value = result.longBreakLength;
   }
 });
 
@@ -61,6 +76,11 @@ document
     let longBreakFreq = document.getElementById("long-break-freq").value;
     let longBreakLength = document.getElementById("long-break-length").value;
     let totalBreakAmt = document.getElementById("total-break-amt").value;
+    let exclusiveMode = false;
+
+    if (document.getElementById("exclusive-mode-cb").checked) {
+      exclusiveMode = true;
+    }
 
     if (
       timerLength !== "" &&
@@ -75,6 +95,7 @@ document
         longBreakFreq: longBreakFreq,
         longBreakLength: longBreakLength,
         totalBreakAmt: totalBreakAmt,
+        exclusiveMode: exclusiveMode,
       });
     } else {
       alert("Please fill out all values");
