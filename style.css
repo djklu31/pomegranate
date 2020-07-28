@@ -56,12 +56,10 @@ body {
 } */
 
 svg:hover {
-  fill-rule: nonzero;
   fill: #da4567;
 }
 
 #add-link-div {
-  margin-top: 20px;
   display: flex;
   align-items: center;
   min-width: 250px;
@@ -72,6 +70,7 @@ svg:hover {
   font-size: 14px;
   color: #777777;
   padding-left: 0px;
+  margin-bottom: 25px;
 }
 
 #top-bar {
@@ -96,6 +95,13 @@ svg:hover {
   display: flex;
   justify-content: center;
   font-size: 100px;
+  color: #333333;
+}
+
+#loading-message {
+  display: flex;
+  justify-content: center;
+  font-size: 40px;
   color: #333333;
 }
 
@@ -148,6 +154,7 @@ svg:hover {
   cursor: pointer;
   transition: all 0.25s;
   background-color: #d75e72;
+  text-decoration: none;
   opacity: 0.75;
 }
 

@@ -13,13 +13,15 @@
     <title>Settings</title>
   </head>
   <body>
-    <div>
+    <div style="display: flex; flex-direction: column;">
       <label>Timer Length:</label><input id="timer" name="timer" placeholder="Timer Length" />
       <label>Number of Breaks:</label><input id="total-break-amt" placeholder="Number of Breaks" />
       <label>Regular Break Length:</label><input id="regular-break-length" placeholder="Regular Break Length" />
       <label>Breaks Until Long Break:</label><input id="long-break-freq" placeholder="Breaks Until Long Break" />
       <label>Long Break Length:</label><input id="long-break-length" placeholder="Long Break Length" />
+      <label>Disable Breaks (Single Timer Mode):</label><input type="checkbox" id="disable-breaks" />
       <label>Exclusive Mode (Disable Timer and Just Block Sites):</label><input type="checkbox" id="exclusive-mode-cb" />
+      <label>Disable New Tab Notification:</label><input type="checkbox" id="disable-new-tab" />
       </div>
       <div>
         <button id="save-settings-btn" class="btn btn-primary">

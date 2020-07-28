@@ -63,12 +63,17 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
         chrome.storage.sync.set({ completedPomodoros: 0 });
         sendResponse({ msg: "timerReset" });
       } else if (!result.timerStarted || request.isResume) {
-        if (devMode) {
+        if (request.isResume) {
           startTimer(1000, parseInt(request.msg));
+          sendResponse({ msg: "timerStarted" });
         } else {
-          startTimer(1000, parseInt(request.msg) * 60);
+          if (devMode) {
+            startTimer(1000, parseInt(request.msg));
+          } else {
+            startTimer(1000, parseInt(request.msg) * 60);
+          }
+          sendResponse({ msg: "timerStarted" });
         }
-        sendResponse({ msg: "timerStarted" });
       } else {
         stopTimer(timer);
         chrome.storage.sync.set({ pausedTime: null });
@@ -89,60 +94,118 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 function timerEnded() {
-  chrome.storage.sync.get(["onBreak"], function (result) {
-    if (result.onBreak) {
-      chrome.storage.sync.set({ onBreak: false });
-      let notifOptions = {
-        type: "progress",
-        iconUrl: "/img/pom-128.png",
-        title: "Break Ended",
-        message: "Ready to Resume?",
-        buttons: [{ title: "Start Timer" }, { title: "Cancel" }],
-      };
-      chrome.notifications.create(notifOptions, function (id) {
-        chrome.notifications.onButtonClicked.addListener(function (
-          notifId,
-          btnIdx
-        ) {
-          if (notifId === id) {
-            if (btnIdx === 0) {
-              chrome.storage.sync.get(["timerLength"], function (result) {
-                chrome.storage.sync.set({ onBreak: false });
-                if (devMode) {
-                  startTimer(1000, result.timerLength);
-                } else {
-                  startTimer(1000, result.timerLength * 60);
-                }
-              });
+  chrome.storage.sync.get(
+    ["onBreak", "disableBreaks", "breakCount", "longBreakFreq"],
+    function (result) {
+      if (result.onBreak || result.disableBreaks) {
+        chrome.storage.sync.set({ onBreak: false });
+        let notifOptions = {};
+
+        let breakCount = parseInt(result.breakCount) + 1;
+        let nextNumber = parseInt(result.longBreakFreq);
+
+        while (nextNumber < breakCount) {
+          nextNumber += parseInt(result.longBreakFreq);
+        }
+
+        let untilLongBreak = nextNumber - breakCount;
+
+        if (result.disableBreaks) {
+          notifOptions = {
+            type: "basic",
+            iconUrl: "/img/pom-128.png",
+            title: "Pomegranate: Timer Ended",
+            message: "Would you like to start another cycle?",
+            buttons: [{ title: "Start Timer" }, { title: "Close" }],
+          };
+          chrome.storage.sync.get(["disableNewTab"], function (result) {
+            if (!result.disableNewTab) {
+              window.open("/html/resumeCyclePage.html");
+            }
+          });
+        } else {
+          if (untilLongBreak === 0) {
+            notifOptions = {
+              type: "basic",
+              iconUrl: "/img/pom-128.png",
+              title: "Pomegranate: Long Break Ended",
+              message: `Long break is over. Ready to resume?`,
+              buttons: [{ title: "Start Timer" }, { title: "Close" }],
+            };
+          } else {
+            if (untilLongBreak === 1) {
+              notifOptions = {
+                type: "basic",
+                iconUrl: "/img/pom-128.png",
+                title: "Pomegranate: Break Ended",
+                message: `Ready to resume? Long break coming in ${untilLongBreak} break.`,
+                buttons: [{ title: "Start Timer" }, { title: "Close" }],
+              };
+            } else {
+              notifOptions = {
+                type: "basic",
+                iconUrl: "/img/pom-128.png",
+                title: "Pomegranate: Break Ended",
+                message: `Ready to resume? Long break coming in ${untilLongBreak} breaks.`,
+                buttons: [{ title: "Start Timer" }, { title: "Close" }],
+              };
             }
           }
-        });
-      });
-      window.open("/html/breakNotifPage.html");
-    } else {
-      chrome.storage.sync.set({ onBreak: true });
-      let notifOptions = {
-        type: "progress",
-        iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
-        title: "Timer Ended",
-        message: "Time for a break?",
-        buttons: [{ title: "Start Break" }, { title: "Cancel" }],
-      };
-      chrome.notifications.create(notifOptions, function (id) {
-        chrome.notifications.onButtonClicked.addListener(function (
-          notifId,
-          btnIdx
-        ) {
-          if (notifId === id) {
-            if (btnIdx === 0) {
-              startBreak();
+          chrome.storage.sync.get(["disableNewTab"], function (result) {
+            if (!result.disableNewTab) {
+              window.open("/html/breakOverPage.html");
             }
+          });
+        }
+
+        chrome.notifications.create(notifOptions, function (id) {
+          chrome.notifications.onButtonClicked.addListener(function (
+            notifId,
+            btnIdx
+          ) {
+            if (notifId === id) {
+              if (btnIdx === 0) {
+                chrome.storage.sync.get(["timerLength"], function (result) {
+                  chrome.storage.sync.set({ onBreak: false });
+                  if (devMode) {
+                    startTimer(1000, result.timerLength);
+                  } else {
+                    startTimer(1000, result.timerLength * 60);
+                  }
+                });
+              }
+            }
+          });
+        });
+      } else {
+        chrome.storage.sync.set({ onBreak: true });
+        let notifOptions = {
+          type: "basic",
+          iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
+          title: "Pomegranate: Timer Ended",
+          message: "Take a Short Break?",
+          buttons: [{ title: "Start Break" }, { title: "Close" }],
+        };
+        chrome.notifications.create(notifOptions, function (id) {
+          chrome.notifications.onButtonClicked.addListener(function (
+            notifId,
+            btnIdx
+          ) {
+            if (notifId === id) {
+              if (btnIdx === 0) {
+                startBreak();
+              }
+            }
+          });
+        });
+        chrome.storage.sync.get(["disableNewTab"], function (result) {
+          if (!result.disableNewTab) {
+            window.open("/html/breakNotifPage.html");
           }
         });
-      });
-      window.open("/html/breakNotifPage.html");
+      }
     }
-  });
+  );
 }
 
 function startTimer(speed, length) {
