@@ -2,7 +2,7 @@ console.log("background running");
 let addresses = [];
 let timer;
 let currentTime = false;
-let devMode = true;
+let devMode = false;
 
 chrome.storage.sync.get(["addresses"], function (result) {
   if (result.address !== undefined) {

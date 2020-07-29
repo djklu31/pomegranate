@@ -576,12 +576,4 @@ function checkDefaultSettings() {
       });
     }
   });
-
-  chrome.storage.sync.get(["totalBreakAmt"], function (result) {
-    if (result.totalBreakAmt === undefined) {
-      chrome.storage.sync.set({
-        totalBreakAmt: 3,
-      });
-    }
-  });
 }

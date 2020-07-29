@@ -1,0 +1,157 @@
+header {
+  background-color: #5e72d7;
+  height: 130px;
+  box-shadow: 3px 3px #888888;
+}
+
+#title {
+  text-align: center;
+  font-family: "Dosis", sans-serif;
+  padding-top: 10px;
+  font-size: 45px;
+  color: floralwhite;
+  margin-bottom: 10px;
+}
+
+#feedback-title {
+  font-family: "Dosis", sans-serif;
+  color: #da4567;
+}
+
+#donate-btn {
+  width: 130px;
+}
+
+#feedback-info {
+  display: flex;
+  font-family: "Lato", sans-serif;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 90px;
+}
+
+#pom-pic {
+  width: 35px;
+  margin-right: 5px;
+  vertical-align: initial;
+}
+
+/* #checkboxes {
+  display: flex;
+  margin-top: 20px;
+  justify-content: center;
+  font-size: 15px;
+  width: 55%;
+  margin-right: auto;
+  margin-left: auto;
+} */
+
+#checkboxes {
+  display: flex;
+  margin-top: 20px;
+  flex-direction: column;
+  justify-content: center;
+  font-size: 15px;
+  width: 55%;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.form-check-input {
+  width: 50px;
+  min-width: 50px;
+}
+
+.form-check-inline {
+  margin-bottom: 30px;
+}
+
+/* #custom-block-url {
+  width: 145px;
+} */
+
+#custom-block-input {
+  width: 55%;
+  margin-left: 15px;
+}
+
+#settings input {
+  width: 70px;
+}
+
+#settings label {
+  padding-top: 7px;
+}
+
+.menu-btn {
+  width: 105px;
+  text-align: center;
+  border-radius: 20px;
+  color: ghostwhite !important;
+  padding: 5px;
+  font-family: "Lato", sans-serif;
+  font-size: 16px;
+  padding-top: 7px;
+  transition: all 0.2s;
+}
+
+.menu-btn:hover {
+  cursor: pointer;
+  background-color: #d75e72;
+}
+
+#save-settings-btn {
+  border-color: #5e72d7;
+  background-color: #5e72d7;
+  outline: none !important;
+  box-shadow: 1px 1px #ffffff;
+  display: flex;
+  justify-content: center;
+  margin-left: auto;
+  margin-right: auto;
+  width: 55%;
+  margin-top: 50px;
+  margin-bottom: 30px;
+}
+
+#save-settings-btn:hover {
+  border-color: #354ecd !important;
+  background-color: #354ecd !important;
+  box-shadow: 2px 2px #888888;
+}
+
+#menu-bar {
+  margin-left: auto;
+  margin-right: auto;
+  width: 250px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.header-label {
+  margin-bottom: -5px;
+  margin-top: 5px;
+  color: #b8304f;
+}
+
+label {
+  font-family: "Lato", sans-serif;
+}
+
+.row {
+  margin-left: 0px;
+}
+
+#settings {
+  display: flex;
+  width: 55%;
+  margin-left: auto;
+  margin-right: auto;
+  flex-direction: column;
+  padding-top: 35px;
+  /* padding-left: 375px; */
+}
+
+hr {
+  border-top: 1px solid rgba(0, 0, 0, 0.2);
+}

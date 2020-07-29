@@ -10,23 +10,180 @@
       integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
       crossorigin="anonymous"
     />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dosis:wght@500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Dosis:wght@500&family=Lato&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/settings-styles.css" />
     <title>Settings</title>
   </head>
+
   <body>
-    <div style="display: flex; flex-direction: column;">
-      <label>Timer Length:</label><input id="timer" name="timer" placeholder="Timer Length" />
-      <label>Number of Breaks:</label><input id="total-break-amt" placeholder="Number of Breaks" />
-      <label>Regular Break Length:</label><input id="regular-break-length" placeholder="Regular Break Length" />
-      <label>Breaks Until Long Break:</label><input id="long-break-freq" placeholder="Breaks Until Long Break" />
-      <label>Long Break Length:</label><input id="long-break-length" placeholder="Long Break Length" />
-      <label>Disable Breaks (Single Timer Mode):</label><input type="checkbox" id="disable-breaks" />
-      <label>Exclusive Mode (Disable Timer and Just Block Sites):</label><input type="checkbox" id="exclusive-mode-cb" />
-      <label>Disable New Tab Notification:</label><input type="checkbox" id="disable-new-tab" />
+    <header>
+      <div id="inner">
+        <div id="title">
+          <img id="pom-pic" src="/img/pom-128.png" /> Pomegranate
+        </div>
+        <div id="menu-bar">
+          <a class="menu-btn" id="settings-btn">Settings</a>
+          <a class="menu-btn" id="feedback-btn">Feedback</a>
+        </div>
+      </div>
+    </header>
+
+    <div id="settings-page">
+      <div id="settings">
+        <label class="header-label"><h3>Focus</h3></label>
+        <hr class="w-100" />
+        <div class="form-group">
+          <label>Focus Timer Duration:</label>
+          <div class="row">
+            <input
+              type="number"
+              min="1"
+              max="999"
+              class="form-control"
+              id="timer"
+              name="timer"
+              placeholder="Timer Length"
+            />
+            <label style="margin-left: 10px;">Minutes</label>
+          </div>
+        </div>
+
+        <label class="header-label"><h3>Breaks</h3></label>
+        <hr class="w-100" />
+
+        <div class="form-group">
+          <label>Regular Break Duration:</label>
+          <div class="row">
+            <input
+              type="number"
+              min="1"
+              max="999"
+              id="regular-break-length"
+              class="form-control"
+              placeholder="Regular Break Length"
+            />
+            <label style="margin-left: 10px;">Minutes</label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Long Break Duration:</label>
+          <div class="row">
+            <input
+              type="number"
+              min="1"
+              max="999"
+              id="long-break-length"
+              class="form-control"
+              placeholder="Long Break Length"
+            />
+            <label style="margin-left: 10px;">Minutes</label>
+          </div>
+        </div>
+
+        <div class="form-group row">
+          <label>Long Break on Every&nbsp;</label
+          ><input
+            type="number"
+            min="1"
+            max="999"
+            id="long-break-freq"
+            class="form-control"
+            placeholder="Breaks Until Long Break"
+          />
+          <label>&nbsp;th Break</label>
+        </div>
+        <label class="header-label"><h3>Special Modes</h3></label>
+        <hr class="w-100" />
+      </div>
+      <div id="checkboxes">
+        <div class="form-check form-check-inline">
+          <input
+            type="checkbox"
+            class="form-control form-check-input"
+            id="disable-breaks"
+          /><label class="form-check-label"
+            >Disable Breaks (Single timer mode)</label
+          >
+        </div>
+        <div class="form-check form-check-inline">
+          <input
+            type="checkbox"
+            class="form-control form-check-input"
+            id="exclusive-mode-cb"
+          /><label class="form-check-label"
+            >Exclusive Mode (Disable timer and only block sites)</label
+          >
+        </div>
+
+        <div class="form-check form-check-inline">
+          <input
+            type="checkbox"
+            class="form-control form-check-input"
+            id="disable-new-tab"
+          /><label class="form-check-label">Disable New Tab Notification</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input
+            type="checkbox"
+            class="form-control form-check-input"
+            id="custom-block-url"
+          /><label class="form-check-label"
+            >Redirect to Custom URL if Blocked:</label
+          >
+          <input id="custom-block-input" class="form-control" type="text" />
+        </div>
       </div>
       <div>
         <button id="save-settings-btn" class="btn btn-primary">
-            Save Settings
-          </button>
+          Save Settings
+        </button>
+      </div>
+    </div>
+
+    <div id="feedback-page">
+      <div id="feedback-info">
+        <div id="feedback-title"><h1>Pomegranate</h1></div>
+        <hr class="w-50" />
+        <p>Developed By: Kenny Lu</p>
+        <p>Email: <a href="mailto:lukennyc@gmail.com">lukennyc@gmail.com</a></p>
+        <p>
+          Website:
+          <a target="_blank" href="https://www.kenzoslice.com"
+            >https://www.kenzoslice.com</a
+          >
+        </p>
+        <p>
+          Github:
+          <a target="_blank" href="https://github.com/djklu31"
+            >https://github.com/djklu31</a
+          >
+        </p>
+        <p>
+          Write Review:
+          <a target="_blank" href=""
+            >Link coming soon</a
+          >
+        </p>
+        <p>
+          <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
+            <input type="hidden" name="cmd" value="_donations" />
+            <input type="hidden" name="business" value="GN8FU2E7Q8TTY" />
+            <input type="hidden" name="item_name" value="Pomegranate" />
+            <input type="hidden" name="currency_code" value="USD" />
+            <input id="donate-btn" type="image" src="/img/donate-button.png" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+            </form>
+        </p>
+      </div>
+    </div>
   </body>
   <script src="/js/settings.js"></script>
 </html>
