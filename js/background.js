@@ -91,7 +91,9 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     if (request.msg === "pause") {
       pauseTimer(request.pauseLength);
     } else {
-      resumeTimer();
+      resumeTimer(function () {
+        sendResponse({ msg: "resumed" });
+      });
     }
   }
   return true;
@@ -299,7 +301,7 @@ function pauseTimer(pauseLength) {
   stopTimer(timer, true);
 }
 
-function resumeTimer() {
+function resumeTimer(callback) {
   chrome.storage.sync.get(["pausedTime"], function (result) {
     // stopTimer();
     if (devMode) {
@@ -308,6 +310,7 @@ function resumeTimer() {
       startTimer(1000, parseInt(result.pausedTime) * 60);
     }
     chrome.storage.sync.set({ pausedTime: "resumed" });
+    callback();
   });
 }
 

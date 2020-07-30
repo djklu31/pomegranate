@@ -150,7 +150,7 @@ function onPageLoad() {
           }
         }
       );
-      chrome.storage.sync.get(["pausedTime"], function (result) {
+      chrome.storage.sync.get(["pausedTime", "onBreak"], function (result) {
         if (
           result.pausedTime !== "resumed" &&
           result.pausedTime !== undefined &&
@@ -169,10 +169,26 @@ function onPageLoad() {
                 "initial";
             }
           });
-          document.getElementById("pause-resume-btn").innerText =
-            "Resume Timer";
+
+          chrome.storage.sync.get(["onBreak"], function (result) {
+            if (result.onBreak) {
+              document.getElementById("pause-resume-btn").innerText =
+                "Resume Break";
+            } else {
+              document.getElementById("pause-resume-btn").innerText =
+                "Resume Timer";
+            }
+          });
         } else {
-          document.getElementById("pause-resume-btn").innerText = "Pause Timer";
+          chrome.storage.sync.get(["onBreak"], function (result) {
+            if (result.onBreak) {
+              document.getElementById("pause-resume-btn").innerText =
+                "Pause Break";
+            } else {
+              document.getElementById("pause-resume-btn").innerText =
+                "Pause Timer";
+            }
+          });
         }
       });
     }
@@ -242,13 +258,39 @@ pauseResumeBtn.addEventListener("click", function (event) {
     chrome.storage.sync.get(["pausedTime"], function (result) {
       triggerTimer(globalTimer, true);
     });
-    chrome.runtime.sendMessage({
-      msg: "resume",
-      action: "togglePause",
+    chrome.runtime.sendMessage(
+      {
+        msg: "resume",
+        action: "togglePause",
+      },
+      function (response) {
+        if (response.msg === "resumed") {
+          setDescription(true);
+        }
+      }
+    );
+  } else if (event.target.innerText === "Resume Break") {
+    document.getElementById("pause-resume-btn").innerText = "Pause Break";
+    chrome.storage.sync.get(["pausedTime"], function (result) {
+      triggerTimer(globalTimer, true);
     });
-    setDescription(true);
+    chrome.runtime.sendMessage(
+      {
+        msg: "resume",
+        action: "togglePause",
+      },
+      function (response) {
+        if (response.msg === "resumed") {
+          setDescription(true);
+        }
+      }
+    );
   } else {
-    document.getElementById("pause-resume-btn").innerText = "Resume Timer";
+    if (event.target.innerText === "Pause Break") {
+      document.getElementById("pause-resume-btn").innerText = "Resume Break";
+    } else {
+      document.getElementById("pause-resume-btn").innerText = "Resume Timer";
+    }
     document.getElementById(
       "description"
     ).innerHTML = `The timer is <span class="highlight">paused.</span>`;
@@ -469,9 +511,23 @@ function triggerTimer(length, isResume, isReset, startBreak) {
 
 function setDescription(timerOn) {
   chrome.storage.sync.get(
-    ["disableBreaks", "exclusiveMode", "onBreak", "completedPomodoros"],
+    [
+      "disableBreaks",
+      "exclusiveMode",
+      "onBreak",
+      "completedPomodoros",
+      "pausedTime",
+    ],
     function (result) {
-      if (timerOn) {
+      if (
+        result.pausedTime !== "resumed" &&
+        result.pausedTime !== undefined &&
+        result.pausedTime !== null
+      ) {
+        document.getElementById(
+          "description"
+        ).innerHTML = `The timer is <span class="highlight">paused.</span>`;
+      } else if (timerOn) {
         if (result.onBreak) {
           untilLongBreak(function (result) {
             if (result == 0) {
