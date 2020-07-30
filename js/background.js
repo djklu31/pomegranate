@@ -1,13 +1,64 @@
 console.log("background running");
-let addresses = [];
 let timer;
 let currentTime = false;
-let devMode = true;
+let devMode = false;
 
-chrome.storage.sync.get(["addresses"], function (result) {
-  if (result.address !== undefined) {
-    addresses = JSON.parse(result.addresses);
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  if (request.action === "addURL") {
+    // chrome.storage.sync.get(["addresses"], function(result) {
+    //   let addresses = [];
+    //   addresses = JSON.parse(result.addresses);
+    // addresses.push(request.msg);
+    // setStorage(sendResponse, "adding");
+
+    chrome.storage.sync.get(["addresses"], function (result) {
+      if (result.addresses !== undefined) {
+        let addresses = [];
+        addresses = JSON.parse(result.addresses);
+        addresses.push(request.msg);
+
+        try {
+          chrome.storage.sync.set(
+            { addresses: JSON.stringify(addresses) },
+            function () {
+              sendResponse({ msg: `success adding url` });
+            }
+          );
+        } catch (error) {
+          sendResponse({ msg: `error adding url` });
+        }
+      }
+    });
+    // });
+  } else if (request.action === "deleteURL") {
+    //remove the ending "hyphen"
+
+    chrome.storage.sync.get(["addresses"], function (result) {
+      if (result.addresses !== undefined) {
+        let addresses = [];
+        addresses = JSON.parse(result.addresses);
+
+        let index = addresses.indexOf(
+          request.msg.substring(2, request.msg.length)
+        );
+        if (index != -1) {
+          addresses.splice(index, 1);
+        }
+
+        try {
+          chrome.storage.sync.set(
+            { addresses: JSON.stringify(addresses) },
+            function () {
+              sendResponse({ msg: `success deleting url` });
+            }
+          );
+        } catch (error) {
+          sendResponse({ msg: `error deleting url` });
+        }
+      }
+    });
   }
+  return true;
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
@@ -22,39 +73,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 });
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-  if (request.action === "addURL") {
-    // chrome.storage.sync.get(["addresses"], function(result) {
-    //   let addresses = [];
-    //   addresses = JSON.parse(result.addresses);
-    addresses.push(request.msg);
-    // setStorage(sendResponse, "adding");
-    try {
-      chrome.storage.sync.set(
-        { addresses: JSON.stringify(addresses) },
-        function () {
-          sendResponse({ msg: `success adding url` });
-        }
-      );
-    } catch (error) {
-      sendResponse({ msg: `error adding url` });
-    }
-    // });
-  } else if (request.action === "deleteURL") {
-    //remove the ending "hyphen"
-    let index = addresses.indexOf(request.msg.substring(2, request.msg.length));
-    addresses.splice(index, 1);
-
-    try {
-      chrome.storage.sync.set(
-        { addresses: JSON.stringify(addresses) },
-        function () {
-          sendResponse({ msg: `success deleting url` });
-        }
-      );
-    } catch (error) {
-      sendResponse({ msg: `error deleting url` });
-    }
-  } else if (request.action === "toggleTimer") {
+  if (request.action === "toggleTimer") {
     chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
       if (request.startBreak) {
         startBreak();

@@ -170,7 +170,7 @@ svg:hover {
   margin-top: 12px;
 }
 
-#delete-url {
+.delete-url {
   display: flex;
   align-items: center;
 }

@@ -590,7 +590,7 @@ function addToList(addresses) {
   let li = document.createElement("li");
   li.setAttribute("class", "li-delete-url");
   let ul = document.getElementById("addresses-list");
-  li.innerHTML = `<div id="delete-url"><a class="delete-btn">-</a>${addresses}</div>`;
+  li.innerHTML = `<div class="delete-url"><a class="delete-btn">-</a>${addresses}</div>`;
   ul.appendChild(li);
 }
 
