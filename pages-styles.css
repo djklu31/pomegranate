@@ -1,0 +1,43 @@
+/* header {
+  background-color: #5e72d7;
+  height: 130px;
+  box-shadow: 3px 3px #888888;
+} */
+body {
+  background-color: #5e72d7;
+}
+#pom-pic {
+  width: 45px;
+}
+#title {
+  text-align: center;
+  font-family: "Dosis", sans-serif;
+  padding-top: 20px;
+  font-size: 45px;
+  color: floralwhite;
+  margin-bottom: 10px;
+}
+.highlight {
+  color: #d7c35e;
+}
+
+#inner-content-quotes {
+  margin-top: 7%;
+  font-size: 35px;
+  text-align: center;
+  color: antiquewhite;
+  font-family: "Lato", sans-serif;
+  width: 50%;
+  margin-right: auto;
+  margin-left: auto;
+}
+#quotesTitle {
+  font-size: 60px;
+}
+#inner-content {
+  margin-top: 15%;
+  font-size: 35px;
+  text-align: center;
+  color: antiquewhite;
+  font-family: "Lato", sans-serif;
+}

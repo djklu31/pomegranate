@@ -37,6 +37,27 @@
     </header>
 
     <div id="settings-page">
+      <div id="alert-container"></div>
+      <!-- <div id="save-success" class="alert alert-success alert-dismissible fade show" role="alert">
+        <strong>Successfully Saved</strong>
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div id="missing-info" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Missing Info:</strong> Please fill out all the highlighted boxes.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+
+      <div id="redirection-not-set" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Missing Info:</strong> Please enter custom URL for redirection or un-check redirect mode at the bottom of the page.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div> -->
       <div id="settings">
         <label class="header-label"><h3>Focus</h3></label>
         <hr class="w-100" />
@@ -50,7 +71,6 @@
               class="form-control"
               id="timer"
               name="timer"
-              placeholder="Timer Length"
             />
             <label style="margin-left: 10px;">Minutes</label>
           </div>
@@ -68,7 +88,6 @@
               max="999"
               id="regular-break-length"
               class="form-control"
-              placeholder="Regular Break Length"
             />
             <label style="margin-left: 10px;">Minutes</label>
           </div>
@@ -83,7 +102,6 @@
               max="999"
               id="long-break-length"
               class="form-control"
-              placeholder="Long Break Length"
             />
             <label style="margin-left: 10px;">Minutes</label>
           </div>
@@ -97,7 +115,6 @@
             max="999"
             id="long-break-freq"
             class="form-control"
-            placeholder="Breaks Until Long Break"
           />
           <label>&nbsp;th Break</label>
         </div>
@@ -120,7 +137,7 @@
             class="form-control form-check-input"
             id="exclusive-mode-cb"
           /><label class="form-check-label"
-            >Exclusive Mode (Disable timer and only block sites)</label
+            >Exclusive Mode (Disable timer and ALWAYS block sites)</label
           >
         </div>
 
@@ -128,18 +145,18 @@
           <input
             type="checkbox"
             class="form-control form-check-input"
-            id="disable-new-tab"
-          /><label class="form-check-label">Disable New Tab Notification</label>
+            id="custom-block-url"
+          /><label class="form-check-label"
+            >Redirect Mode (Redirect to Custom URL if Blocked):</label
+          >
+          <input id="custom-block-input" class="form-control" type="text" />
         </div>
         <div class="form-check form-check-inline">
           <input
             type="checkbox"
             class="form-control form-check-input"
-            id="custom-block-url"
-          /><label class="form-check-label"
-            >Redirect to Custom URL if Blocked:</label
-          >
-          <input id="custom-block-input" class="form-control" type="text" />
+            id="disable-new-tab"
+          /><label class="form-check-label">Disable New Tab Notification</label>
         </div>
       </div>
       <div>
@@ -169,21 +186,35 @@
         </p>
         <p>
           Write Review:
-          <a target="_blank" href=""
-            >Link coming soon</a
-          >
+          <a target="_blank" href="">Link coming soon</a>
         </p>
         <p>
-          <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top">
-            <input type="hidden" name="cmd" value="_donations" />
-            <input type="hidden" name="business" value="GN8FU2E7Q8TTY" />
-            <input type="hidden" name="item_name" value="Pomegranate" />
-            <input type="hidden" name="currency_code" value="USD" />
-            <input id="donate-btn" type="image" src="/img/donate-button.png" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-            </form>
+          Version: 1.0
         </p>
+
+        <form
+          action="https://www.paypal.com/cgi-bin/webscr"
+          method="post"
+          target="_top"
+        >
+          <input type="hidden" name="cmd" value="_donations" />
+          <input type="hidden" name="business" value="GN8FU2E7Q8TTY" />
+          <input type="hidden" name="item_name" value="Pomegranate" />
+          <input type="hidden" name="currency_code" value="USD" />
+          <input
+            id="donate-btn"
+            type="image"
+            src="/img/donate-button.png"
+            border="0"
+            name="submit"
+            title="PayPal - The safer, easier way to pay online!"
+            alt="Donate with PayPal button"
+          />
+        </form>
       </div>
     </div>
   </body>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
   <script src="/js/settings.js"></script>
 </html>

@@ -160,7 +160,7 @@ function timerEnded() {
                 type: "basic",
                 iconUrl: "/img/pom-128.png",
                 title: "Pomegranate: Break Ended",
-                message: `Ready to resume? A long break is coming in ${untilLongBreak} break.`,
+                message: `Ready to resume? The next break is a long one.`,
                 buttons: [{ title: "Start Timer" }, { title: "Close" }],
               };
             } else {

@@ -374,8 +374,12 @@ resetTimerBtn.addEventListener("click", function () {
 });
 
 settingsBtn.addEventListener("click", function () {
-  window.open("/html/settings.html");
+  openSettingsPage();
 });
+
+function openSettingsPage() {
+  window.open("/html/settings.html");
+}
 
 // function setTimerOnDesc() {
 //   document.getElementById(
@@ -460,6 +464,10 @@ function setDescription(timerOn) {
               document.getElementById(
                 "description"
               ).innerHTML = `<span class="highlight">Long break</span> started.`;
+            } else if (result == 1) {
+              document.getElementById(
+                "description"
+              ).innerHTML = `<span class="highlight">Break started.</span> The next break is a long one.`;
             } else {
               document.getElementById(
                 "description"
@@ -469,13 +477,13 @@ function setDescription(timerOn) {
         } else {
           document.getElementById(
             "description"
-          ).innerHTML = `<span class="highlight">Focus timer is running.</span> Websites entered are being blocked.`;
+          ).innerHTML = `<span class="highlight">Focus timer is running.</span> The websites entered are being blocked.`;
         }
       } else {
         if (result.exclusiveMode) {
           document.getElementById(
             "description"
-          ).innerHTML = `<span class="highlight">Exclusive Mode is enabled.</span> Websites entered are always being blocked. The timer is disabled.`;
+          ).innerHTML = `<span class="highlight">Exclusive Mode is enabled.</span> The websites entered below are ALWAYS being blocked and the timer is disabled.`;
         } else if (result.onBreak) {
           untilLongBreak(function (res) {
             if (res == 0) {
