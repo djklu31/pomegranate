@@ -2,7 +2,7 @@ console.log("background running");
 let addresses = [];
 let timer;
 let currentTime = false;
-let devMode = false;
+let devMode = true;
 
 chrome.storage.sync.get(["addresses"], function (result) {
   if (result.address !== undefined) {
@@ -13,6 +13,10 @@ chrome.storage.sync.get(["addresses"], function (result) {
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "getTimeLeft") {
     sendResponse({ timeLeft: currentTime });
+  }
+  if (request.action === "showRedirectNotif") {
+    showRedirectNotif(request.original, request.redirectURL);
+    sendResponse({ msg: "notif-success" });
   }
   return true;
 });
@@ -93,9 +97,27 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   return true;
 });
 
+function showRedirectNotif(currentSite, redirectURL) {
+  let notifOptions = {
+    type: "basic",
+    iconUrl: "/img/pom-128.png",
+    title: "Pomegranate",
+    message: currentSite + " was redirected to " + redirectURL,
+    buttons: [{ title: "Close" }],
+  };
+
+  chrome.notifications.create(notifOptions, function (id) {});
+}
+
 function timerEnded() {
   chrome.storage.sync.get(
-    ["onBreak", "disableBreaks", "breakCount", "longBreakFreq"],
+    [
+      "onBreak",
+      "disableBreaks",
+      "breakCount",
+      "longBreakFreq",
+      "completedPomodoros",
+    ],
     function (result) {
       if (result.onBreak || result.disableBreaks) {
         chrome.storage.sync.set({ onBreak: false });
@@ -138,7 +160,7 @@ function timerEnded() {
                 type: "basic",
                 iconUrl: "/img/pom-128.png",
                 title: "Pomegranate: Break Ended",
-                message: `Ready to resume? Long break coming in ${untilLongBreak} break.`,
+                message: `Ready to resume? A long break is coming in ${untilLongBreak} break.`,
                 buttons: [{ title: "Start Timer" }, { title: "Close" }],
               };
             } else {
@@ -146,7 +168,7 @@ function timerEnded() {
                 type: "basic",
                 iconUrl: "/img/pom-128.png",
                 title: "Pomegranate: Break Ended",
-                message: `Ready to resume? Long break coming in ${untilLongBreak} breaks.`,
+                message: `Ready to resume? A long break is coming in ${untilLongBreak} breaks.`,
                 buttons: [{ title: "Start Timer" }, { title: "Close" }],
               };
             }
@@ -178,14 +200,37 @@ function timerEnded() {
           });
         });
       } else {
+        let breakCount = parseInt(result.breakCount) + 1;
+        let nextNumber = parseInt(result.longBreakFreq);
+
+        while (nextNumber < breakCount) {
+          nextNumber += parseInt(result.longBreakFreq);
+        }
+
+        let untilLongBreak = nextNumber - breakCount;
+        let notifOptions = {};
+
+        if (untilLongBreak === 0) {
+          notifOptions = {
+            type: "basic",
+            iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
+            title: "Pomegranate: Timer Ended",
+            message: `Congrats, you've made it this far. ${
+              result.completedPomodoros + 1
+            } pomodoro cycles completed. Ready to take a long break?`,
+            buttons: [{ title: "Start Break" }, { title: "Close" }],
+          };
+        } else {
+          notifOptions = {
+            type: "basic",
+            iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
+            title: "Pomegranate: Timer Ended",
+            message: `Pomodoro cycle finished. Ready to take a short break?`,
+            buttons: [{ title: "Start Break" }, { title: "Close" }],
+          };
+        }
+
         chrome.storage.sync.set({ onBreak: true });
-        let notifOptions = {
-          type: "basic",
-          iconUrl: "https://image.flaticon.com/icons/png/512/605/605255.png",
-          title: "Pomegranate: Timer Ended",
-          message: "Take a Short Break?",
-          buttons: [{ title: "Start Break" }, { title: "Close" }],
-        };
         chrome.notifications.create(notifOptions, function (id) {
           chrome.notifications.onButtonClicked.addListener(function (
             notifId,

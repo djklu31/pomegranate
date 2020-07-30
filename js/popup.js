@@ -10,10 +10,10 @@ let showAddressListBtn = document.getElementById("toggle-address-list");
 let timer;
 let devMode = false;
 let globalTimer;
-let instanceReset = false;
 
 checkDefaultSettings();
 onPageLoad();
+setDescription();
 
 function displayLoading() {
   document.getElementById("loading-message").style.display = "initial";
@@ -29,91 +29,152 @@ function onPageLoad() {
   zeroOutDisplay();
   displayLoading();
 
-  chrome.storage.sync.get(["timerStarted", "onBreak", "pausedTime"], function (
-    result
-  ) {
-    if (result.timerStarted) {
-      //get from background script
-      chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (
-        response
-      ) {
-        console.log(response);
-        if (response.timeLeft === false && !result.pausedTime) {
-          document.getElementById("timer-display").innerText = "--:--";
+  chrome.storage.sync.get(["exclusiveMode"], function (result) {
+    if (result.exclusiveMode) {
+      forceStopTimer();
+      hideLoading();
+      // document.getElementById(
+      //   "description"
+      // ).innerHTML = `<span class="highlight">Exclusive Mode</span> is enabled and websites entered are always being blocked. The timer is disabled.`;
+    } else {
+      chrome.storage.sync.get(
+        [
+          "timerStarted",
+          "onBreak",
+          "pausedTime",
+          "disableBreaks",
+          "longBreakFreq",
+        ],
+        function (result) {
+          // if (!result.disableBreaks) {
+          //   document.getElementById(
+          //     "description"
+          //   ).innerHTML = `<span class="highlight">Focus mode</span> is enabled. All websites entered below will be blocked when the timer starts.`;
+          // }
 
-          setTimeout(function () {
+          if (result.timerStarted) {
+            //get from background script
             chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (
               response
             ) {
-              let currentTimeLeft = parseInt(response.timeLeft);
-              // chrome.storage.sync.get(["pausedTime"], function (result) {
-              if (
-                result.pausedTime === "resumed" ||
-                result.pausedTime === undefined ||
-                result.pausedTime === null
-              ) {
-                chrome.storage.sync.get(["showAddressList"], function (result) {
-                  if (result.showAddressList) {
-                    showURLSection();
-                  } else {
-                    hideURLSection();
-                  }
-                });
-                convertToMinutes(currentTimeLeft);
-              }
-              // });
-            });
-          }, 1000);
-        } else {
-          let currentTimeLeft = parseInt(response.timeLeft);
-          // chrome.storage.sync.get(["pausedTime"], function (result) {
-          if (
-            result.pausedTime === "resumed" ||
-            result.pausedTime === undefined ||
-            result.pausedTime === null
-          ) {
-            chrome.storage.sync.get(["showAddressList"], function (result) {
-              if (result.showAddressList) {
-                showURLSection();
-                document.getElementById("toggle-address-list").style.fill =
-                  "#da4567";
+              console.log(response);
+              if (response.timeLeft === false && !result.pausedTime) {
+                document.getElementById("timer-display").innerText = "--:--";
+
+                setTimeout(function () {
+                  chrome.runtime.sendMessage(
+                    { action: "getTimeLeft" },
+                    function (response) {
+                      let currentTimeLeft = parseInt(response.timeLeft);
+                      // chrome.storage.sync.get(["pausedTime"], function (result) {
+                      if (
+                        result.pausedTime === "resumed" ||
+                        result.pausedTime === undefined ||
+                        result.pausedTime === null
+                      ) {
+                        chrome.storage.sync.get(["showAddressList"], function (
+                          result
+                        ) {
+                          if (result.showAddressList) {
+                            showURLSection();
+                          } else {
+                            hideURLSection();
+                          }
+                        });
+                        convertToMinutes(currentTimeLeft);
+                      }
+                      // });
+                    }
+                  );
+                }, 1000);
               } else {
-                hideURLSection();
-                document.getElementById("toggle-address-list").style.fill =
-                  "initial";
+                let currentTimeLeft = parseInt(response.timeLeft);
+                // chrome.storage.sync.get(["pausedTime"], function (result) {
+                if (
+                  result.pausedTime === "resumed" ||
+                  result.pausedTime === undefined ||
+                  result.pausedTime === null
+                ) {
+                  chrome.storage.sync.get(["showAddressList"], function (
+                    result
+                  ) {
+                    if (result.showAddressList) {
+                      showURLSection();
+                      document.getElementById(
+                        "toggle-address-list"
+                      ).style.fill = "#da4567";
+                    } else {
+                      hideURLSection();
+                      document.getElementById(
+                        "toggle-address-list"
+                      ).style.fill = "initial";
+                    }
+                  });
+                  convertToMinutes(currentTimeLeft);
+                }
+                // });
               }
             });
-            convertToMinutes(currentTimeLeft);
+
+            if (result.onBreak) {
+              hideLoading();
+              setDescription(true);
+              document.getElementById("block-sites-btn").innerText =
+                "Stop Break";
+            } else {
+              hideLoading();
+              setDescription(true);
+              document.getElementById("block-sites-btn").innerText =
+                "Stop Timer";
+            }
+
+            showTimer();
+            hideURLSection();
+            document.getElementById("pause-resume-btn").disabled = false;
+          } else {
+            if (result.onBreak) {
+              hideLoading();
+              document.getElementById("block-sites-btn").innerText =
+                "Start Break";
+              hideTimer();
+              showURLSection();
+              document.getElementById("pause-resume-btn").disabled = true;
+            } else {
+              hideLoading();
+              document.getElementById("block-sites-btn").innerText =
+                "Start Timer";
+              hideTimer();
+              showURLSection();
+              document.getElementById("pause-resume-btn").disabled = true;
+            }
           }
-          // });
+        }
+      );
+      chrome.storage.sync.get(["pausedTime"], function (result) {
+        if (
+          result.pausedTime !== "resumed" &&
+          result.pausedTime !== undefined &&
+          result.pausedTime !== null
+        ) {
+          //get from background script
+          displayPausedTime(result.pausedTime);
+          chrome.storage.sync.get(["showAddressList"], function (result) {
+            if (result.showAddressList) {
+              showURLSection();
+              document.getElementById("toggle-address-list").style.fill =
+                "#da4567";
+            } else {
+              hideURLSection();
+              document.getElementById("toggle-address-list").style.fill =
+                "initial";
+            }
+          });
+          document.getElementById("pause-resume-btn").innerText =
+            "Resume Timer";
+        } else {
+          document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         }
       });
-
-      if (result.onBreak) {
-        hideLoading();
-        document.getElementById("block-sites-btn").innerText = "Stop Break";
-      } else {
-        hideLoading();
-        document.getElementById("block-sites-btn").innerText = "Stop Timer";
-      }
-
-      showTimer();
-      hideURLSection();
-      document.getElementById("pause-resume-btn").disabled = false;
-    } else {
-      if (result.onBreak) {
-        hideLoading();
-        document.getElementById("block-sites-btn").innerText = "Start Break";
-        hideTimer();
-        showURLSection();
-        document.getElementById("pause-resume-btn").disabled = true;
-      } else {
-        hideLoading();
-        document.getElementById("block-sites-btn").innerText = "Start Timer";
-        hideTimer();
-        showURLSection();
-        document.getElementById("pause-resume-btn").disabled = true;
-      }
     }
   });
 }
@@ -137,29 +198,6 @@ chrome.storage.sync.get(["showAddressList"], function (result) {
   if (result.showAddressList === undefined) {
     document.getElementById("toggle-address-list").style.fill = "#da4567";
     chrome.storage.sync.set({ showAddressList: true });
-  }
-});
-
-chrome.storage.sync.get(["pausedTime"], function (result) {
-  if (
-    result.pausedTime !== "resumed" &&
-    result.pausedTime !== undefined &&
-    result.pausedTime !== null
-  ) {
-    //get from background script
-    displayPausedTime(result.pausedTime);
-    chrome.storage.sync.get(["showAddressList"], function (result) {
-      if (result.showAddressList) {
-        showURLSection();
-        document.getElementById("toggle-address-list").style.fill = "#da4567";
-      } else {
-        hideURLSection();
-        document.getElementById("toggle-address-list").style.fill = "initial";
-      }
-    });
-    document.getElementById("pause-resume-btn").innerText = "Resume Timer";
-  } else {
-    document.getElementById("pause-resume-btn").innerText = "Pause Timer";
   }
 });
 
@@ -196,8 +234,12 @@ pauseResumeBtn.addEventListener("click", function (event) {
       msg: "resume",
       action: "togglePause",
     });
+    setDescription(true);
   } else {
     document.getElementById("pause-resume-btn").innerText = "Resume Timer";
+    document.getElementById(
+      "description"
+    ).innerHTML = `The timer is <span class="highlight">paused.</span>`;
     displayPausedTime(globalTimer);
     chrome.runtime.sendMessage({
       msg: "pause",
@@ -208,7 +250,6 @@ pauseResumeBtn.addEventListener("click", function (event) {
 });
 
 statsBtn.addEventListener("mouseover", function (event) {
-  // if (!instanceReset) {
   chrome.storage.sync.get(["completedPomodoros", "breakCount"], function (
     result
   ) {
@@ -235,6 +276,20 @@ showAddressListBtn.addEventListener("click", function (event) {
     }
   });
 });
+
+function untilLongBreak(callback) {
+  chrome.storage.sync.get(["breakCount", "longBreakFreq"], function (result) {
+    let breakCount = parseInt(result.breakCount) + 1;
+    let nextNumber = parseInt(result.longBreakFreq);
+
+    while (nextNumber < breakCount) {
+      nextNumber += parseInt(result.longBreakFreq);
+    }
+
+    let untilLongBreak = nextNumber - breakCount;
+    callback(untilLongBreak);
+  });
+}
 
 function toggleShowAddressList(callback) {
   chrome.storage.sync.get(["showAddressList"], function (result) {
@@ -276,7 +331,9 @@ blockSitesBtn.addEventListener("click", function () {
       if (result.onBreak) {
         document.getElementById("block-sites-btn").innerText = "Stop Break";
         document.getElementById("pause-resume-btn").disabled = true;
+        setDescription(true);
       } else {
+        setDescription(true);
         document.getElementById("block-sites-btn").innerText = "Stop Timer";
         document.getElementById("pause-resume-btn").disabled = false;
       }
@@ -313,13 +370,18 @@ blockSitesBtn.addEventListener("click", function () {
 });
 
 resetTimerBtn.addEventListener("click", function () {
-  instanceReset = true;
   triggerTimer(null, false, true);
 });
 
 settingsBtn.addEventListener("click", function () {
   window.open("/html/settings.html");
 });
+
+// function setTimerOnDesc() {
+//   document.getElementById(
+//     "description"
+//   ).innerHTML = `<span class="highlight">Focus</span> timer is running and websites entered are being blocked.`;
+// }
 
 function triggerTimer(length, isResume, isReset, startBreak) {
   chrome.runtime.sendMessage(
@@ -364,10 +426,13 @@ function triggerTimer(length, isResume, isReset, startBreak) {
         document.getElementById("block-sites-btn").innerText = "Start Timer";
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
+        setDescription();
       } else if (response.msg === "timerStopped") {
         stopTimer();
         hideTimer();
         showURLSection();
+
+        setDescription();
         // chrome.storage.sync.get(["onBreak"], function (result) {
         //   if (result.onBreak) {
         //     document.getElementById("block-sites-btn").innerText =
@@ -379,6 +444,59 @@ function triggerTimer(length, isResume, isReset, startBreak) {
         // });
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
+      }
+    }
+  );
+}
+
+function setDescription(timerOn) {
+  chrome.storage.sync.get(
+    ["disableBreaks", "exclusiveMode", "onBreak", "completedPomodoros"],
+    function (result) {
+      if (timerOn) {
+        if (result.onBreak) {
+          untilLongBreak(function (result) {
+            if (result == 0) {
+              document.getElementById(
+                "description"
+              ).innerHTML = `<span class="highlight">Long break</span> started.`;
+            } else {
+              document.getElementById(
+                "description"
+              ).innerHTML = `<span class="highlight">Break started.</span> ${result} breaks until long break.`;
+            }
+          });
+        } else {
+          document.getElementById(
+            "description"
+          ).innerHTML = `<span class="highlight">Focus timer is running.</span> Websites entered are being blocked.`;
+        }
+      } else {
+        if (result.exclusiveMode) {
+          document.getElementById(
+            "description"
+          ).innerHTML = `<span class="highlight">Exclusive Mode is enabled.</span> Websites entered are always being blocked. The timer is disabled.`;
+        } else if (result.onBreak) {
+          untilLongBreak(function (res) {
+            if (res == 0) {
+              document.getElementById(
+                "description"
+              ).innerHTML = `<span class="highlight">Congrats. You've completed ${result.completedPomodoros} pomodoro cycles.</span> Ready to stretch your legs and take a long break?`;
+            } else {
+              document.getElementById(
+                "description"
+              ).innerHTML = `<span class="highlight">Pomodoro cycle ended.</span> Ready to take a short break?`;
+            }
+          });
+        } else if (result.disableBreaks) {
+          document.getElementById(
+            "description"
+          ).innerHTML = `<span class="highlight">Single Timer Mode is on.</span> Breaks are disabled but the normal timer works as expected.`;
+        } else {
+          document.getElementById(
+            "description"
+          ).innerHTML = `<span class="highlight">Focus mode is enabled.</span> All websites entered below will be blocked when the timer starts.`;
+        }
       }
     }
   );
@@ -494,6 +612,16 @@ function displayPausedTime(currentTimeLeft) {
   ).innerText = `${paddedMinutes}:${paddedSeconds}`;
 }
 
+function forceStopTimer() {
+  hideTimer();
+  showURLSection();
+  document.getElementById("block-sites-btn").innerText = "Start Timer";
+  document.getElementById("block-sites-btn").disabled = true;
+  document.getElementById("pause-resume-btn").innerText = "Pause Timer";
+  document.getElementById("pause-resume-btn").disabled = true;
+  document.getElementById("reset-timer-btn").disabled = true;
+}
+
 function zeroOutDisplay() {
   document.getElementById("timer-display").innerText = "00:00";
 }
@@ -552,6 +680,14 @@ function checkDefaultSettings() {
       });
     }
   });
+
+  // chrome.storage.sync.get(["disableBreaks"], function (result) {
+  //   if (result.disableBreaks) {
+  //     document.getElementById(
+  //       "description"
+  //     ).innerHTML = `<span class="highlight">Single Timer Mode</span> is on. Breaks are disabled but the normal timer works as expected.`;
+  //   }
+  // });
 
   chrome.storage.sync.get(["timerLength"], function (result) {
     if (result.timerLength === undefined) {

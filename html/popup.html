@@ -181,7 +181,13 @@
       </div>
 
       <div id="loading-message">
-        Loading...
+        <div>
+          <p id="loading-p">Loading...</p>
+        </div>
+
+        <div id="loading-bar-spinner" class="spinner">
+          <div class="spinner-icon"></div>
+        </div>
       </div>
 
       <div id="post-load">
@@ -190,6 +196,11 @@
           <!-- <label>Pomodoros Completed</label>
           <div id="completed-pomodoros-display"></div> -->
         </div>
+
+        <div id="mode-description">
+          <p id="description"></p>
+        </div>
+
         <div id="block-url-container">
           <div id="add-link-div">
             <input
@@ -207,7 +218,7 @@
           <button id="block-sites-btn" class="btn btn-danger"></button>
           <button id="pause-resume-btn" class="btn btn-danger"></button>
           <button id="reset-timer-btn" class="btn btn-danger">
-            Reset Timer
+            Reset Stats
           </button>
         </div>
       </div>

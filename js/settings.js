@@ -189,8 +189,19 @@ document
         redirectURL: redirectURL.trim(),
       });
 
+      if (exclusiveMode) {
+        chrome.storage.sync.set({ timerStarted: true });
+        stopTimerBG();
+      }
+
       alert("Saved.");
     } else {
       alert("Please fill out all values in the focus and break section.");
     }
   });
+
+function stopTimerBG() {
+  chrome.runtime.sendMessage({
+    action: "toggleTimer",
+  });
+}

@@ -12,7 +12,7 @@ html {
 
 body {
   padding: 20px;
-  padding-bottom: 45px;
+  padding-bottom: 40px;
   font-family: "Lato", sans-serif;
 }
 
@@ -36,6 +36,17 @@ body {
 #title {
   font-family: "Dosis", sans-serif;
   margin-right: 5px;
+}
+
+#description {
+  font-size: 12px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+  color: #777777;
+}
+
+.highlight {
+  color: #5e72d7;
 }
 
 #pom-logo {
@@ -63,14 +74,13 @@ svg:hover {
   display: flex;
   align-items: center;
   min-width: 250px;
-  margin-bottom: 25px;
 }
 
 #addresses-list {
   font-size: 14px;
   color: #777777;
   padding-left: 0px;
-  margin-bottom: 25px;
+  margin-bottom: 20px;
 }
 
 #top-bar {
@@ -99,10 +109,8 @@ svg:hover {
 }
 
 #loading-message {
-  display: flex;
-  justify-content: center;
-  font-size: 40px;
-  color: #333333;
+  color: #b8304f;
+  text-align: center;
 }
 
 #add-url-btn {
@@ -171,4 +179,40 @@ input[type="text"] {
   outline: none;
   box-shadow: none !important;
   border: 1px solid #ccc !important;
+}
+
+#loading-p {
+  margin-top: 12px;
+  padding-right: 25px;
+  font-size: 16px;
+  margin-bottom: -8px;
+}
+
+/* Spinner */
+#loading-bar-spinner.spinner {
+  left: 61%;
+  top: 61%;
+  position: absolute;
+  z-index: 19 !important;
+  animation: loading-bar-spinner 400ms linear infinite;
+}
+
+#loading-bar-spinner.spinner .spinner-icon {
+  width: 20px;
+  height: 20px;
+  border: solid 2px transparent;
+  border-top-color: #d75e72 !important;
+  border-left-color: #d75e72 !important;
+  border-radius: 50%;
+}
+
+@keyframes loading-bar-spinner {
+  0% {
+    transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
 }
