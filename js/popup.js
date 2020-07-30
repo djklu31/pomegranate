@@ -202,6 +202,18 @@ chrome.storage.sync.get(["showAddressList"], function (result) {
 });
 
 //Event Listeners
+
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  if (request.action === "startTimer") {
+    toggleStartStop();
+    sendResponse({ msg: "timer-started" });
+  } else if (request.action === "startBreak") {
+    toggleStartStop();
+    sendResponse({ msg: "break-started" });
+  }
+  return true;
+});
+
 parentList.addEventListener("click", function (event) {
   console.log(event);
   if (event.target.tagName === "A") {
@@ -325,7 +337,9 @@ function addURL(event) {
 addURLBtn.addEventListener("click", addURL);
 document.getElementById("address-box").addEventListener("keyup", addURL);
 
-blockSitesBtn.addEventListener("click", function () {
+blockSitesBtn.addEventListener("click", toggleStartStop);
+
+function toggleStartStop() {
   chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
     if (!result.timerStarted) {
       if (result.onBreak) {
@@ -367,7 +381,7 @@ blockSitesBtn.addEventListener("click", function () {
       }
     }
   });
-});
+}
 
 resetTimerBtn.addEventListener("click", function () {
   triggerTimer(null, false, true);
@@ -558,15 +572,8 @@ function convertToMinutes(currentTimeLeft) {
       seconds = 59;
 
       if (minutes < 0) {
+        setDescription();
         stopTimer();
-        chrome.storage.sync.get(["isBreak", "completedPomodoros"], function (
-          result
-        ) {
-          if (!result.isBreak) {
-            document.getElementById("completed-pomodoros-display").innerText =
-              result.completedPomodoros + 1;
-          }
-        });
         document.getElementById("timer-display").innerHTML = "";
         document.getElementById("block-sites-btn").innerText = "Start Timer";
         onPageLoad();

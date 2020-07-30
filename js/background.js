@@ -189,11 +189,18 @@ function timerEnded() {
               if (btnIdx === 0) {
                 chrome.storage.sync.get(["timerLength"], function (result) {
                   chrome.storage.sync.set({ onBreak: false });
-                  if (devMode) {
-                    startTimer(1000, result.timerLength);
-                  } else {
-                    startTimer(1000, result.timerLength * 60);
-                  }
+                  chrome.runtime.sendMessage(
+                    { action: "startTimer" },
+                    function (response) {
+                      if (response === undefined) {
+                        if (devMode) {
+                          startTimer(1000, result.timerLength);
+                        } else {
+                          startTimer(1000, result.timerLength * 60);
+                        }
+                      }
+                    }
+                  );
                 });
               }
             }
@@ -238,7 +245,13 @@ function timerEnded() {
           ) {
             if (notifId === id) {
               if (btnIdx === 0) {
-                startBreak();
+                chrome.runtime.sendMessage({ action: "startBreak" }, function (
+                  response
+                ) {
+                  if (response === undefined) {
+                    startBreak();
+                  }
+                });
               }
             }
           });
