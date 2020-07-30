@@ -175,6 +175,12 @@ svg:hover {
   align-items: center;
 }
 
+.status-icon {
+  width: 15px;
+  margin-right: 5px;
+  margin-top: -5px;
+}
+
 input[type="text"] {
   outline: none;
   box-shadow: none !important;

@@ -293,7 +293,7 @@ pauseResumeBtn.addEventListener("click", function (event) {
     }
     document.getElementById(
       "description"
-    ).innerHTML = `The timer is <span class="highlight">paused.</span>`;
+    ).innerHTML = `<img class="status-icon" src="/img/pause.png" />The timer is <span class="highlight">paused.</span>`;
     displayPausedTime(globalTimer);
     chrome.runtime.sendMessage({
       msg: "pause",
@@ -526,54 +526,54 @@ function setDescription(timerOn) {
       ) {
         document.getElementById(
           "description"
-        ).innerHTML = `The timer is <span class="highlight">paused.</span>`;
+        ).innerHTML = `<img class="status-icon" src="/img/pause.png" />The timer is <span class="highlight">paused.</span>`;
       } else if (timerOn) {
         if (result.onBreak) {
           untilLongBreak(function (result) {
             if (result == 0) {
               document.getElementById(
                 "description"
-              ).innerHTML = `<span class="highlight">Long break</span> started.`;
+              ).innerHTML = `<img class="status-icon" src="/img/long-break.png" /><span class="highlight">Long break</span> started.`;
             } else if (result == 1) {
               document.getElementById(
                 "description"
-              ).innerHTML = `<span class="highlight">Break started.</span> The next break is a long one.`;
+              ).innerHTML = `<img class="status-icon" src="/img/short-break.png" /><span class="highlight">Break started.</span> Blocked websites are now enabled. The next break is a long one.`;
             } else {
               document.getElementById(
                 "description"
-              ).innerHTML = `<span class="highlight">Break started.</span> ${result} breaks until long break.`;
+              ).innerHTML = `<img class="status-icon" src="/img/short-break.png" /><span class="highlight">Break started.</span> Blocked websites are now enabled. ${result} breaks until long break.`;
             }
           });
         } else {
           document.getElementById(
             "description"
-          ).innerHTML = `<span class="highlight">Focus timer is running.</span> The websites entered are being blocked.`;
+          ).innerHTML = `<img class="status-icon" src="/img/color-clock.png" /><span class="highlight">Focus timer is running.</span> The websites entered are being blocked.`;
         }
       } else {
         if (result.exclusiveMode) {
           document.getElementById(
             "description"
-          ).innerHTML = `<span class="highlight">Exclusive Mode is enabled.</span> The websites entered below are ALWAYS being blocked and the timer is disabled.`;
+          ).innerHTML = `<img class="status-icon" src="/img/exclusive-mode.png" /><span class="highlight">Exclusive Mode is enabled.</span> The websites entered below are ALWAYS being blocked and the timer is disabled.`;
         } else if (result.onBreak) {
           untilLongBreak(function (res) {
             if (res == 0) {
               document.getElementById(
                 "description"
-              ).innerHTML = `<span class="highlight">Congrats. You've completed ${result.completedPomodoros} pomodoro cycles.</span> Ready to stretch your legs and take a long break?`;
+              ).innerHTML = `<img class="status-icon" src="/img/party.png" /><span class="highlight">Congrats.</span> You've completed ${result.completedPomodoros} pomodoro cycles. Ready to stretch your legs and take a <span class="highlight">long break?</span>`;
             } else {
               document.getElementById(
                 "description"
-              ).innerHTML = `<span class="highlight">Pomodoro cycle ended.</span> Ready to take a short break?`;
+              ).innerHTML = `<img class="status-icon" src="/img/completed.png" /><span class="highlight">Pomodoro cycle ended.</span> Ready to take a short break?`;
             }
           });
         } else if (result.disableBreaks) {
           document.getElementById(
             "description"
-          ).innerHTML = `<span class="highlight">Single Timer Mode is on.</span> Breaks are disabled but the normal timer works as expected.`;
+          ).innerHTML = `<img class="status-icon" src="/img/single-timer.png" /><span class="highlight">Single Timer Mode is on.</span> Breaks are disabled but the normal timer works as expected.`;
         } else {
           document.getElementById(
             "description"
-          ).innerHTML = `<span class="highlight">Focus mode is enabled.</span> All websites entered below will be blocked when the timer starts.`;
+          ).innerHTML = `<img class="status-icon" src="/img/focus-mode.png" /><span class="highlight">Focus mode is enabled.</span> All websites entered below will be blocked when the timer starts.`;
         }
       }
     }

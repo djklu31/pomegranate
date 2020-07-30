@@ -21,8 +21,15 @@ body {
   color: #d7c35e;
 }
 
+.big-icon {
+  margin-right: 20px;
+  opacity: 0.75;
+  width: 75px;
+  margin-top: -35px;
+}
+
 #inner-content-quotes {
-  margin-top: 7%;
+  margin-top: 12%;
   font-size: 35px;
   text-align: center;
   color: antiquewhite;

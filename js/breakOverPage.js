@@ -8,8 +8,12 @@ chrome.storage.sync.get(["breakCount", "longBreakFreq"], function (result) {
 
   let untilLongBreak = nextNumber - breakCount;
   if (untilLongBreak === 0) {
-    document.getElementById("long-short").innerText = "Long";
+    document.getElementById(
+      "long-short"
+    ).innerHTML = `<img class="big-icon" src="/img/breaks-over.png" />Long`;
   } else {
-    document.getElementById("long-short").innerText = "Short";
+    document.getElementById(
+      "long-short"
+    ).innerHTML = `<img class="big-icon" src="/img/breaks-over.png" />Short`;
   }
 });
