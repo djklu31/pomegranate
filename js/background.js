@@ -306,7 +306,9 @@ function startTimer(speed, length) {
     if (minutes < 1) {
       chrome.browserAction.setBadgeText({ text: seconds.toString() + "s" });
     } else {
-      chrome.browserAction.setBadgeText({ text: minutes.toString() + "m" });
+      chrome.browserAction.setBadgeText({
+        text: (minutes + 1).toString() + "m",
+      });
     }
     if (length <= 0) {
       chrome.storage.sync.set({ pausedTime: null });
