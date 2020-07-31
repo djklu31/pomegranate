@@ -18,9 +18,9 @@
     "scripts": ["/js/background.js"]
   },
   "icons": {
-    "16": "/img/pom-16.png",
-    "48": "/img/pom-48.png",
-    "128": "/img/pom-128.png"
+    "16": "/pom-16.png",
+    "48": "/pom-48.png",
+    "128": "/pom-128.png"
   },
   "permissions": ["storage", "tabs", "notifications"],
   "web_accessible_resources": [
