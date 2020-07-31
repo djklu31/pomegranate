@@ -382,30 +382,51 @@ document.getElementById("address-box").addEventListener("keyup", addURL);
 blockSitesBtn.addEventListener("click", toggleStartStop);
 
 function toggleStartStop() {
-  chrome.storage.sync.get(["timerStarted", "onBreak"], function (result) {
-    if (!result.timerStarted) {
-      if (result.onBreak) {
-        document.getElementById("block-sites-btn").innerText = "Stop Break";
-        document.getElementById("pause-resume-btn").disabled = true;
-        setDescription(true);
+  chrome.storage.sync.get(
+    ["timerStarted", "onBreak", "showAddressList"],
+    function (result) {
+      if (!result.timerStarted) {
+        if (result.onBreak) {
+          document.getElementById("block-sites-btn").innerText = "Stop Break";
+          document.getElementById("pause-resume-btn").disabled = true;
+          if (result.showAddressList) {
+            showURLSection();
+            document.getElementById("toggle-address-list").style.fill =
+              "#da4567";
+          } else {
+            hideURLSection();
+            document.getElementById("toggle-address-list").style.fill =
+              "initial";
+          }
+          setDescription(true);
+        } else {
+          setDescription(true);
+          document.getElementById("block-sites-btn").innerText = "Stop Timer";
+          if (result.showAddressList) {
+            showURLSection();
+            document.getElementById("toggle-address-list").style.fill =
+              "#da4567";
+          } else {
+            hideURLSection();
+            document.getElementById("toggle-address-list").style.fill =
+              "initial";
+          }
+          document.getElementById("pause-resume-btn").disabled = false;
+        }
+        closeTimerEndedWindows();
+        // getTimeLeft();
       } else {
-        setDescription(true);
-        document.getElementById("block-sites-btn").innerText = "Stop Timer";
-        document.getElementById("pause-resume-btn").disabled = false;
+        if (result.onBreak) {
+          document.getElementById("block-sites-btn").innerText = "Start Break";
+          document.getElementById("pause-resume-btn").disabled = true;
+        } else {
+          document.getElementById("block-sites-btn").innerText = "Start Timer";
+          document.getElementById("pause-resume-btn").disabled = true;
+        }
+        // stopTimer();
       }
-      closeTimerEndedWindows();
-      // getTimeLeft();
-    } else {
-      if (result.onBreak) {
-        document.getElementById("block-sites-btn").innerText = "Start Break";
-        document.getElementById("pause-resume-btn").disabled = true;
-      } else {
-        document.getElementById("block-sites-btn").innerText = "Start Timer";
-        document.getElementById("pause-resume-btn").disabled = true;
-      }
-      // stopTimer();
     }
-  });
+  );
 
   chrome.storage.sync.get(["timerLength", "onBreak", "timerStarted"], function (
     result
