@@ -1,7 +1,7 @@
 console.log("background running");
 let timer;
 let currentTime = false;
-let devMode = true;
+let devMode = false;
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "addURL") {
@@ -95,14 +95,15 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
           } else {
             startTimer(1000, parseInt(request.msg) * 60);
           }
+          chrome.browserAction.setBadgeBackgroundColor({ color: "#48A367" });
           sendResponse({ msg: "timerStarted" });
         }
       } else {
         stopTimer(timer);
         chrome.storage.sync.set({ pausedTime: null });
+        // }
         // if (!result.onBreak) {
         //   chrome.storage.sync.set({ onBreak: false });
-        // }
         sendResponse({ msg: "timerStopped" });
       }
     });
@@ -223,6 +224,9 @@ function timerEnded() {
                     }
                   );
                 });
+                chrome.browserAction.setBadgeBackgroundColor({
+                  color: "#48A367",
+                });
                 closeTimerEndedWindows();
               }
             }
@@ -296,9 +300,18 @@ function startTimer(speed, length) {
     //stop all previous timers if a new one is started
     length = length - 1;
     currentTime = length;
+    let minutes = Math.floor(currentTime / 60);
+    let seconds = currentTime % 60;
+
+    if (minutes < 1) {
+      chrome.browserAction.setBadgeText({ text: seconds.toString() + "s" });
+    } else {
+      chrome.browserAction.setBadgeText({ text: minutes.toString() + "m" });
+    }
     if (length <= 0) {
       chrome.storage.sync.set({ pausedTime: null });
       chrome.storage.sync.set({ timerStarted: false });
+      chrome.browserAction.setBadgeText({ text: "" });
       stopTimer(timer);
       timerEnded();
       chrome.storage.sync.get(["completedPomodoros", "onBreak"], function (
@@ -350,6 +363,7 @@ function checkLongBreak(breakCount) {
           } else {
             startTimer(1000, parseInt(longBreakLength) * 60);
           }
+          chrome.browserAction.setBadgeBackgroundColor({ color: "#a39448" });
         });
       } else {
         chrome.storage.sync.get(["breakLength"], function (result) {
@@ -359,6 +373,7 @@ function checkLongBreak(breakCount) {
           } else {
             startTimer(1000, parseInt(result.breakLength) * 60);
           }
+          chrome.browserAction.setBadgeBackgroundColor({ color: "#a39448" });
         });
       }
     });
@@ -388,6 +403,7 @@ function stopTimer(timerId, dontReflect) {
   if (!dontReflect) {
     chrome.storage.sync.set({ timerStarted: false });
   }
+  chrome.browserAction.setBadgeText({ text: "" });
   for (let i = timerId; i >= 0; i--) {
     clearInterval(i);
   }
@@ -401,7 +417,7 @@ function closeTimerEndedWindows() {
       for (tab of tabs) {
         if (
           tab.title === "Timer Ended - Pomegranate" ||
-          tab.title === "Break Ended - Pomegranate"
+          tab.title === "Break's Over - Pomegranate"
         ) {
           console.log("CLOSE: " + JSON.stringify(tab));
           chrome.tabs.remove(tab.id);

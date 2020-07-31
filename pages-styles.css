@@ -21,6 +21,17 @@ body {
   color: #d7c35e;
 }
 
+#start-btn {
+  width: 200px;
+  margin-top: 25px;
+  background-color: #d7c35e;
+}
+
+#start-container {
+  display: flex;
+  justify-content: center;
+}
+
 .big-icon {
   margin-right: 20px;
   opacity: 0.75;
@@ -42,7 +53,7 @@ body {
   font-size: 60px;
 }
 #inner-content {
-  margin-top: 15%;
+  margin-top: 13%;
   font-size: 35px;
   text-align: center;
   color: antiquewhite;
