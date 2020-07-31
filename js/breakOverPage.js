@@ -10,7 +10,7 @@ chrome.storage.sync.get(["breakCount", "longBreakFreq"], function (result) {
   if (untilLongBreak === 0) {
     document.getElementById(
       "long-short"
-    ).innerHTML = `<img class="big-icon" src="/img/breaks-over.png" />Long`;
+    ).innerHTML = `<img class="big-icon" src="/img/vacation-big.png" />Long`;
   } else {
     document.getElementById(
       "long-short"

@@ -1,7 +1,7 @@
 console.log("background running");
 let timer;
 let currentTime = false;
-let devMode = false;
+let devMode = true;
 
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "addURL") {
@@ -223,6 +223,7 @@ function timerEnded() {
                     }
                   );
                 });
+                closeTimerEndedWindows();
               }
             }
           });
@@ -273,6 +274,7 @@ function timerEnded() {
                     startBreak();
                   }
                 });
+                closeTimerEndedWindows();
               }
             }
           });
@@ -389,4 +391,22 @@ function stopTimer(timerId, dontReflect) {
   for (let i = timerId; i >= 0; i--) {
     clearInterval(i);
   }
+}
+
+function closeTimerEndedWindows() {
+  chrome.tabs.query({}, function (tabs) {
+    // and use that tab to fill in out title and url
+    console.log(tabs);
+    if (tabs !== undefined) {
+      for (tab of tabs) {
+        if (
+          tab.title === "Timer Ended - Pomegranate" ||
+          tab.title === "Break Ended - Pomegranate"
+        ) {
+          console.log("CLOSE: " + JSON.stringify(tab));
+          chrome.tabs.remove(tab.id);
+        }
+      }
+    }
+  });
 }
