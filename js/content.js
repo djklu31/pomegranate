@@ -10,7 +10,7 @@ chrome.storage.sync.get(["addresses", "onBreak", "exclusiveMode"], function (
             let addresses = JSON.parse(response.addresses);
             console.log(location.href);
             for (address of addresses) {
-              if (location.href.indexOf(address) !== -1) {
+              if (location.href.indexOf(address.toLowerCase()) !== -1) {
                 if (result.redirectEnabled) {
                   // let notifOptions = {
                   //   type: "basic",
