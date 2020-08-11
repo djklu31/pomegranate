@@ -7,6 +7,7 @@ let pauseResumeBtn = document.getElementById("pause-resume-btn");
 let resetTimerBtn = document.getElementById("reset-timer-btn");
 let statsBtn = document.getElementById("stats-btn");
 let showAddressListBtn = document.getElementById("toggle-address-list");
+let skipBreakBtn = document.getElementById("skip-break-btn");
 let timer;
 let devMode = false;
 let globalTimer;
@@ -14,6 +15,10 @@ let globalTimer;
 checkDefaultSettings();
 onPageLoad();
 setDescription();
+
+$(function () {
+  $("#skip-break-btn").tooltip();
+});
 
 function displayLoading() {
   document.getElementById("loading-message").style.display = "initial";
@@ -24,6 +29,19 @@ function hideLoading() {
   document.getElementById("loading-message").style.display = "none";
   document.getElementById("post-load").style.display = "initial";
 }
+
+chrome.storage.sync.get(["popupOpenCount"], function (result) {
+  let count = result.popupOpenCount + 1;
+  chrome.storage.sync.set({ popupOpenCount: count });
+
+  if (count === 1) {
+    chrome.storage.sync.set({ onBreak: false });
+    chrome.storage.sync.set({ pausedTime: null });
+    chrome.storage.sync.set({ breakStarted: false });
+    chrome.storage.sync.set({ timerStarted: true });
+    toggleStartStop();
+  }
+});
 
 function onPageLoad() {
   zeroOutDisplay();
@@ -121,11 +139,14 @@ function onPageLoad() {
               setDescription(true);
               document.getElementById("block-sites-btn").innerText =
                 "Stop Break";
+              document.getElementById("skip-break-btn").style.display =
+                "initial;";
             } else {
               hideLoading();
               setDescription(true);
               document.getElementById("block-sites-btn").innerText =
                 "Stop Timer";
+              document.getElementById("skip-break-btn").style.display = "none";
             }
 
             showTimer();
@@ -136,6 +157,8 @@ function onPageLoad() {
               hideLoading();
               document.getElementById("block-sites-btn").innerText =
                 "Start Break";
+              document.getElementById("skip-break-btn").style.display =
+                "initial;";
               hideTimer();
               showURLSection();
               document.getElementById("pause-resume-btn").disabled = true;
@@ -143,6 +166,7 @@ function onPageLoad() {
               hideLoading();
               document.getElementById("block-sites-btn").innerText =
                 "Start Timer";
+              document.getElementById("skip-break-btn").style.display = "none";
               hideTimer();
               showURLSection();
               document.getElementById("pause-resume-btn").disabled = true;
@@ -184,9 +208,12 @@ function onPageLoad() {
             if (result.onBreak) {
               document.getElementById("pause-resume-btn").innerText =
                 "Pause Break";
+              document.getElementById("skip-break-btn").style.display =
+                "initial;";
             } else {
               document.getElementById("pause-resume-btn").innerText =
                 "Pause Timer";
+              document.getElementById("skip-break-btn").style.display = "none";
             }
           });
         }
@@ -303,6 +330,18 @@ pauseResumeBtn.addEventListener("click", function (event) {
   }
 });
 
+skipBreakBtn.addEventListener("click", function (event) {
+  $("#skip-break-btn").tooltip("hide");
+  chrome.storage.sync.set({ onBreak: false });
+  chrome.storage.sync.set({ timerStarted: true });
+  chrome.storage.sync.set({ breakStarted: false });
+  chrome.storage.sync.get(["breakCount"], function (result) {
+    let count = result.breakCount + 1;
+    chrome.storage.sync.set({ breakCount: count });
+  });
+  toggleStartStop();
+});
+
 statsBtn.addEventListener("mouseover", function (event) {
   chrome.storage.sync.get(["completedPomodoros", "breakCount"], function (
     result
@@ -388,6 +427,7 @@ function toggleStartStop() {
       if (!result.timerStarted) {
         if (result.onBreak) {
           document.getElementById("block-sites-btn").innerText = "Stop Break";
+          document.getElementById("skip-break-btn").style.display = "initial;";
           document.getElementById("pause-resume-btn").disabled = true;
           if (result.showAddressList) {
             showURLSection();
@@ -402,6 +442,7 @@ function toggleStartStop() {
         } else {
           setDescription(true);
           document.getElementById("block-sites-btn").innerText = "Stop Timer";
+          document.getElementById("skip-break-btn").style.display = "none";
           if (result.showAddressList) {
             showURLSection();
             document.getElementById("toggle-address-list").style.fill =
@@ -418,9 +459,11 @@ function toggleStartStop() {
       } else {
         if (result.onBreak) {
           document.getElementById("block-sites-btn").innerText = "Start Break";
+          document.getElementById("skip-break-btn").style.display = "initial;";
           document.getElementById("pause-resume-btn").disabled = true;
         } else {
           document.getElementById("block-sites-btn").innerText = "Start Timer";
+          document.getElementById("skip-break-btn").style.display = "none";
           document.getElementById("pause-resume-btn").disabled = true;
         }
         // stopTimer();
@@ -506,6 +549,7 @@ function triggerTimer(length, isResume, isReset, startBreak) {
         hideTimer();
         showURLSection();
         document.getElementById("block-sites-btn").innerText = "Start Timer";
+        document.getElementById("skip-break-btn").style.display = "none";
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
         setDescription();
@@ -602,12 +646,6 @@ function setDescription(timerOn) {
   );
 }
 
-function startBreak() {
-  let breakLength = document.getElementById("break-length");
-  alert("break starting");
-  convertToMinutes(breakLength * 60);
-}
-
 function addToList(addresses) {
   let li = document.createElement("li");
   li.setAttribute("class", "li-delete-url");
@@ -637,45 +675,54 @@ function convertToMinutes(currentTimeLeft) {
     paddedMinutes = minutes;
   }
 
-  document.getElementById(
-    "timer-display"
-  ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+  if (!isNaN(paddedMinutes) && !isNaN(paddedSeconds)) {
+    document.getElementById(
+      "timer-display"
+    ).innerText = `${paddedMinutes}:${paddedSeconds}`;
 
-  timer = setInterval(function () {
-    globalTimer -= 1;
-    seconds -= 1;
+    timer = setInterval(function () {
+      globalTimer -= 1;
+      seconds -= 1;
 
-    if (seconds < 0) {
-      minutes = minutes - 1;
-      seconds = 59;
+      if (seconds < 0) {
+        minutes = minutes - 1;
+        seconds = 59;
 
-      if (minutes < 0) {
-        setDescription();
-        stopTimer();
-        document.getElementById("timer-display").innerHTML = "";
-        document.getElementById("block-sites-btn").innerText = "Start Timer";
-        onPageLoad();
-        timerStopped = true;
+        if (minutes < 0) {
+          setDescription();
+          stopTimer();
+          document.getElementById("timer-display").innerHTML = "";
+          document.getElementById("block-sites-btn").innerText = "Start Timer";
+          document.getElementById("skip-break-btn").style.display = "none";
+          onPageLoad();
+          timerStopped = true;
+        }
       }
-    }
-    if (seconds < 10) {
-      paddedSeconds = "0" + seconds;
-    } else {
-      paddedSeconds = seconds;
-    }
+      if (seconds < 10) {
+        paddedSeconds = "0" + seconds;
+      } else {
+        paddedSeconds = seconds;
+      }
 
-    if (minutes < 10) {
-      paddedMinutes = "0" + minutes;
-    } else {
-      paddedMinutes = minutes;
-    }
+      if (minutes < 10) {
+        paddedMinutes = "0" + minutes;
+      } else {
+        paddedMinutes = minutes;
+      }
 
-    if (!timerStopped) {
-      document.getElementById(
-        "timer-display"
-      ).innerText = `${paddedMinutes}:${paddedSeconds}`;
-    }
-  }, 1000);
+      if (!timerStopped) {
+        document.getElementById(
+          "timer-display"
+        ).innerText = `${paddedMinutes}:${paddedSeconds}`;
+      }
+    }, 1000);
+  } else {
+    chrome.storage.sync.set({ onBreak: false });
+    chrome.storage.sync.set({ pausedTime: null });
+    chrome.storage.sync.set({ breakStarted: false });
+    chrome.storage.sync.set({ timerStarted: true });
+    toggleStartStop();
+  }
 }
 
 function displayPausedTime(currentTimeLeft) {
@@ -709,6 +756,7 @@ function forceStopTimer() {
   hideTimer();
   showURLSection();
   document.getElementById("block-sites-btn").innerText = "Start Timer";
+  document.getElementById("skip-break-btn").style.display = "none";
   document.getElementById("block-sites-btn").disabled = true;
   document.getElementById("pause-resume-btn").innerText = "Pause Timer";
   document.getElementById("pause-resume-btn").disabled = true;

@@ -16,6 +16,22 @@ body {
   font-family: "Lato", sans-serif;
 }
 
+.btn-warning,
+.btn-warning:focus {
+  border-color: #d7c35e;
+  background-color: #d7c35e;
+}
+
+.btn-danger:active {
+  border-color: #d7c35e !important;
+  background-color: #d7c35e !important;
+}
+
+.btn-danger {
+  outline: none !important;
+  box-shadow: 1px 1px #ffffff;
+}
+
 .btn-danger,
 .btn-danger:focus {
   border-color: #d75e72;
@@ -60,6 +76,12 @@ body {
   border-color: #ff7171;
 }
 
+.btn-warning:hover {
+  box-shadow: 2px 2px #888888;
+  background-color: #cdb435;
+  border-color: #cdb435;
+}
+
 /* #settings-btn:hover,
 #stats-btn:hover,
 #toggle-address-list:hover {
@@ -68,6 +90,10 @@ body {
 
 svg:hover {
   fill: #da4567;
+}
+
+#reset-timer-btn {
+  margin-left: 1px;
 }
 
 #add-link-div {
@@ -128,7 +154,7 @@ svg:hover {
 
 #buttons {
   display: flex;
-  justify-content: space-between;
+  justify-content: center;
 }
 
 #title-container {
@@ -144,6 +170,18 @@ svg:hover {
 #address-box {
   border-radius: 0.25rem 0rem 0rem 0.25rem;
   height: 35px;
+}
+
+#skip-break-btn {
+  margin-left: 1px;
+}
+
+#skip-break-img {
+  width: 16px;
+}
+
+#pause-resume-btn {
+  margin-left: 1px;
 }
 
 .delete-btn {

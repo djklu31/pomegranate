@@ -3,6 +3,9 @@ let timer;
 let currentTime = false;
 let devMode = false;
 
+//keep track of first popup open.
+chrome.storage.sync.set({ popupOpenCount: 0 });
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   if (request.action === "addURL") {
     chrome.storage.sync.get(["addresses"], function (result) {
