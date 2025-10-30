@@ -1,23 +1,193 @@
-let addURLBtn = document.getElementById("add-url-btn");
-let parentList = document.getElementById("addresses-list");
-let blockSitesBtn = document.getElementById("block-sites-btn");
-// let saveSettingsBtn = document.getElementById("save-settings-btn");
-let settingsBtn = document.getElementById("settings-btn");
-let pauseResumeBtn = document.getElementById("pause-resume-btn");
-let resetTimerBtn = document.getElementById("reset-timer-btn");
-let statsBtn = document.getElementById("stats-btn");
-let showAddressListBtn = document.getElementById("toggle-address-list");
-let skipBreakBtn = document.getElementById("skip-break-btn");
+let addURLBtn;
+let parentList;
+let blockSitesBtn;
+let settingsBtn;
+let pauseResumeBtn;
+let resetTimerBtn;
+let statsBtn;
+let showAddressListBtn;
+let skipBreakBtn;
 let timer;
 let devMode = false;
 let globalTimer;
 
+// Wait for DOM to be ready before attaching event listeners
+document.addEventListener('DOMContentLoaded', function() {
+  // Re-get DOM elements to ensure they exist
+  addURLBtn = document.getElementById("add-url-btn");
+  parentList = document.getElementById("addresses-list");
+  blockSitesBtn = document.getElementById("block-sites-btn");
+  settingsBtn = document.getElementById("settings-btn");
+  pauseResumeBtn = document.getElementById("pause-resume-btn");
+  resetTimerBtn = document.getElementById("reset-timer-btn");
+  statsBtn = document.getElementById("stats-btn");
+  showAddressListBtn = document.getElementById("toggle-address-list");
+  skipBreakBtn = document.getElementById("skip-break-btn");
+  
+  // Attach event listeners
+  if (parentList) {
+    parentList.addEventListener("click", function (event) {
+      console.log(event);
+      if (event.target.tagName === "A") {
+        chrome.runtime.sendMessage(
+          { msg: event.target.parentNode.innerText.trim(), action: "deleteURL" },
+          function (response) {
+            if (response && response.msg === "success deleting url") {
+              var list = document.getElementsByTagName("li");
+              for (item of list) {
+                if (item.innerText === event.target.parentNode.innerText) {
+                  item.parentNode.removeChild(item);
+                  break;
+                }
+              }
+            } else if (response && response.msg === "error deleting url") {
+              console.log("ERROR deleting URL (handle somehow)");
+            }
+          }
+        );
+      }
+    });
+  }
+
+  if (pauseResumeBtn) {
+    pauseResumeBtn.addEventListener("click", function (event) {
+      if (event.target.innerText === "Resume Timer") {
+        document.getElementById("pause-resume-btn").innerText = "Pause Timer";
+        chrome.storage.sync.get(["pausedTime"], function (result) {
+          triggerTimer(globalTimer, true);
+        });
+        chrome.runtime.sendMessage(
+          {
+            msg: "resume",
+            action: "togglePause",
+          },
+          function (response) {
+            if (response && response.msg === "resumed") {
+              setDescription(true);
+            }
+          }
+        );
+      } else if (event.target.innerText === "Resume Break") {
+        document.getElementById("pause-resume-btn").innerText = "Pause Break";
+        chrome.storage.sync.get(["pausedTime"], function (result) {
+          triggerTimer(globalTimer, true);
+        });
+        chrome.runtime.sendMessage(
+          {
+            msg: "resume",
+            action: "togglePause",
+          },
+          function (response) {
+            if (response && response.msg === "resumed") {
+              setDescription(true);
+            }
+          }
+        );
+      } else {
+        if (event.target.innerText === "Pause Break") {
+          document.getElementById("pause-resume-btn").innerText = "Resume Break";
+        } else {
+          document.getElementById("pause-resume-btn").innerText = "Resume Timer";
+        }
+        document.getElementById(
+          "description"
+        ).innerHTML = `<img class="status-icon" src="/img/pause.png" />The timer is <span class="highlight">paused.</span>`;
+        displayPausedTime(globalTimer);
+        chrome.runtime.sendMessage({
+          msg: "pause",
+          action: "togglePause",
+          pauseLength: globalTimer,
+        }, function(response) {
+          if (response && response.msg === "paused") {
+            console.log("Timer paused successfully");
+          }
+        });
+      }
+    });
+  }
+
+  if (skipBreakBtn) {
+    skipBreakBtn.addEventListener("click", function (event) {
+      $("#skip-break-btn").tooltip("hide");
+      chrome.storage.sync.set({ onBreak: false });
+      chrome.storage.sync.set({ timerStarted: true });
+      chrome.storage.sync.set({ breakStarted: false });
+      chrome.storage.sync.get(["breakCount"], function (result) {
+        let count = result.breakCount + 1;
+        chrome.storage.sync.set({ breakCount: count });
+      });
+      toggleStartStop();
+    });
+  }
+
+  if (statsBtn) {
+    statsBtn.addEventListener("mouseover", function (event) {
+      chrome.storage.sync.get(["completedPomodoros", "breakCount"], function (
+        result
+      ) {
+        statsBtn.setAttribute(
+          "title",
+          `Completed Pomodoros: ${result.completedPomodoros} Completed Breaks: ${result.breakCount}`
+        );
+        statsBtn.setAttribute(
+          "data-original-title",
+          `Completed Pomodoros: ${result.completedPomodoros} Completed Breaks: ${result.breakCount}`
+        );
+        $("#stats-btn").tooltip("show");
+      });
+    });
+  }
+
+  if (showAddressListBtn) {
+    showAddressListBtn.addEventListener("click", function (event) {
+      toggleShowAddressList(function (result) {
+        if (result === true) {
+          showURLSection();
+          document.getElementById("toggle-address-list").style.fill = "#da4567";
+        } else {
+          hideURLSection();
+          document.getElementById("toggle-address-list").style.fill = "initial";
+        }
+      });
+    });
+  }
+
+  if (addURLBtn) {
+    addURLBtn.addEventListener("click", addURL);
+  }
+  
+  if (document.getElementById("address-box")) {
+    document.getElementById("address-box").addEventListener("keyup", addURL);
+  }
+
+  if (blockSitesBtn) {
+    blockSitesBtn.addEventListener("click", toggleStartStop);
+  }
+
+  if (resetTimerBtn) {
+    resetTimerBtn.addEventListener("click", function () {
+      triggerTimer(null, false, true);
+    });
+  }
+
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", function () {
+      openSettingsPage();
+    });
+  }
+
+  // Initialize tooltips
+  $("#skip-break-btn").tooltip();
+  
+  // Set initial state for reset button
+  if (resetTimerBtn) {
+    resetTimerBtn.style.display = "initial";
+  }
+  
+  // Initialize the extension
 checkDefaultSettings();
 onPageLoad();
 setDescription();
-
-$(function () {
-  $("#skip-break-btn").tooltip();
 });
 
 function displayLoading() {
@@ -34,12 +204,19 @@ chrome.storage.sync.get(["popupOpenCount"], function (result) {
   let count = result.popupOpenCount + 1;
   chrome.storage.sync.set({ popupOpenCount: count });
 
+  // Only reset state if this is the very first time the extension is used
+  // and no timer has ever been started (to preserve break state)
   if (count === 1) {
-    chrome.storage.sync.set({ onBreak: false });
-    chrome.storage.sync.set({ pausedTime: null });
-    chrome.storage.sync.set({ breakStarted: false });
-    chrome.storage.sync.set({ timerStarted: true });
-    toggleStartStop();
+    chrome.storage.sync.get(["timerStarted"], function(timerResult) {
+      if (timerResult.timerStarted === undefined) {
+        // First time ever - safe to reset
+        chrome.storage.sync.set({ onBreak: false });
+        chrome.storage.sync.set({ pausedTime: null });
+        chrome.storage.sync.set({ breakStarted: false });
+        chrome.storage.sync.set({ timerStarted: false });
+      }
+      // Otherwise, preserve existing state (especially break state)
+    });
   }
 });
 
@@ -51,9 +228,6 @@ function onPageLoad() {
     if (result.exclusiveMode) {
       forceStopTimer();
       hideLoading();
-      // document.getElementById(
-      //   "description"
-      // ).innerHTML = `<span class="highlight">Exclusive Mode</span> is enabled and websites entered are always being blocked. The timer is disabled.`;
     } else {
       chrome.storage.sync.get(
         [
@@ -64,50 +238,44 @@ function onPageLoad() {
           "longBreakFreq",
         ],
         function (result) {
-          // if (!result.disableBreaks) {
-          //   document.getElementById(
-          //     "description"
-          //   ).innerHTML = `<span class="highlight">Focus mode</span> is enabled. All websites entered below will be blocked when the timer starts.`;
-          // }
-
-          if (result.timerStarted) {
-            //get from background script
-            chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (
-              response
-            ) {
-              console.log(response);
-              if (response.timeLeft === false && !result.pausedTime) {
-                document.getElementById("timer-display").innerText = "--:--";
-
-                setTimeout(function () {
-                  chrome.runtime.sendMessage(
-                    { action: "getTimeLeft" },
-                    function (response) {
-                      let currentTimeLeft = parseInt(response.timeLeft);
-                      // chrome.storage.sync.get(["pausedTime"], function (result) {
-                      if (
-                        result.pausedTime === "resumed" ||
-                        result.pausedTime === undefined ||
-                        result.pausedTime === null
-                      ) {
-                        chrome.storage.sync.get(["showAddressList"], function (
-                          result
-                        ) {
-                          if (result.showAddressList) {
-                            showURLSection();
-                          } else {
-                            hideURLSection();
-                          }
-                        });
-                        convertToMinutes(currentTimeLeft);
-                      }
-                      // });
-                    }
-                  );
-                }, 1000);
+          // Simple approach: check background script for timer state
+          chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (response) {
+            // If we get a valid response, timer is running
+            if (response && response.timeLeft !== false) {
+              result.timerStarted = true;
+              // Set button text immediately based on timer state
+              if (result.onBreak) {
+                document.getElementById("block-sites-btn").innerText = "Stop Break";
               } else {
+                document.getElementById("block-sites-btn").innerText = "Stop Timer";
+              }
+            }
+            
+            // Process the state normally
+            processTimerState(result);
+          });
+        }
+      );
+    }
+  });
+}
+
+function processTimerState(result) {
+  if (result.timerStarted) {
+    //get from background script
+    chrome.runtime.sendMessage({ action: "getTimeLeft" }, function (
+      response
+    ) {
+      console.log(response);
+      if (response && response.timeLeft === false && !result.pausedTime) {
+        document.getElementById("timer-display").innerText = "--:--";
+
+        setTimeout(function () {
+          chrome.runtime.sendMessage(
+            { action: "getTimeLeft" },
+            function (response) {
+              if (response) {
                 let currentTimeLeft = parseInt(response.timeLeft);
-                // chrome.storage.sync.get(["pausedTime"], function (result) {
                 if (
                   result.pausedTime === "resumed" ||
                   result.pausedTime === undefined ||
@@ -118,104 +286,126 @@ function onPageLoad() {
                   ) {
                     if (result.showAddressList) {
                       showURLSection();
-                      document.getElementById(
-                        "toggle-address-list"
-                      ).style.fill = "#da4567";
                     } else {
                       hideURLSection();
-                      document.getElementById(
-                        "toggle-address-list"
-                      ).style.fill = "initial";
                     }
                   });
                   convertToMinutes(currentTimeLeft);
                 }
-                // });
               }
-            });
-
-            if (result.onBreak) {
-              hideLoading();
-              setDescription(true);
-              document.getElementById("block-sites-btn").innerText =
-                "Stop Break";
-              document.getElementById("skip-break-btn").style.display =
-                "initial;";
-            } else {
-              hideLoading();
-              setDescription(true);
-              document.getElementById("block-sites-btn").innerText =
-                "Stop Timer";
-              document.getElementById("skip-break-btn").style.display = "none";
             }
-
-            showTimer();
-            hideURLSection();
-            document.getElementById("pause-resume-btn").disabled = false;
-          } else {
-            if (result.onBreak) {
-              hideLoading();
-              document.getElementById("block-sites-btn").innerText =
-                "Start Break";
-              document.getElementById("skip-break-btn").style.display =
-                "initial;";
-              hideTimer();
-              showURLSection();
-              document.getElementById("pause-resume-btn").disabled = true;
-            } else {
-              hideLoading();
-              document.getElementById("block-sites-btn").innerText =
-                "Start Timer";
-              document.getElementById("skip-break-btn").style.display = "none";
-              hideTimer();
-              showURLSection();
-              document.getElementById("pause-resume-btn").disabled = true;
-            }
-          }
-        }
-      );
-      chrome.storage.sync.get(["pausedTime", "onBreak"], function (result) {
+          );
+        }, 1000);
+      } else if (response) {
+        let currentTimeLeft = parseInt(response.timeLeft);
         if (
-          result.pausedTime !== "resumed" &&
-          result.pausedTime !== undefined &&
-          result.pausedTime !== null
+          result.pausedTime === "resumed" ||
+          result.pausedTime === undefined ||
+          result.pausedTime === null
         ) {
-          //get from background script
-          displayPausedTime(result.pausedTime);
           chrome.storage.sync.get(["showAddressList"], function (result) {
             if (result.showAddressList) {
               showURLSection();
-              document.getElementById("toggle-address-list").style.fill =
-                "#da4567";
+              document.getElementById(
+                "toggle-address-list"
+              ).style.fill = "#da4567";
             } else {
               hideURLSection();
-              document.getElementById("toggle-address-list").style.fill =
-                "initial";
+              document.getElementById(
+                "toggle-address-list"
+              ).style.fill = "initial";
             }
           });
+          convertToMinutes(currentTimeLeft);
+        }
+      }
+    });
 
-          chrome.storage.sync.get(["onBreak"], function (result) {
-            if (result.onBreak) {
-              document.getElementById("pause-resume-btn").innerText =
-                "Resume Break";
-            } else {
-              document.getElementById("pause-resume-btn").innerText =
-                "Resume Timer";
-            }
-          });
+    if (result.onBreak) {
+      hideLoading();
+      setDescription(true);
+      document.getElementById("block-sites-btn").innerText = "Stop Break";
+      document.getElementById("skip-break-btn").style.display = "initial;";
+      document.getElementById("reset-timer-btn").style.display = "none";
+    } else {
+      hideLoading();
+      setDescription(true);
+      document.getElementById("block-sites-btn").innerText = "Stop Timer";
+      document.getElementById("skip-break-btn").style.display = "none";
+      document.getElementById("reset-timer-btn").style.display = "none";
+    }
+
+    showTimer();
+    hideURLSection();
+    document.getElementById("pause-resume-btn").disabled = false;
+  } else {
+    // Timer is not started - check if we're in break mode
+    if (result.onBreak) {
+      hideLoading();
+      document.getElementById("block-sites-btn").innerText = "Start Break";
+      document.getElementById("skip-break-btn").style.display = "initial;";
+      document.getElementById("reset-timer-btn").style.display = "none";
+      hideTimer();
+      showURLSection();
+      document.getElementById("pause-resume-btn").disabled = true;
+    } else {
+      hideLoading();
+      document.getElementById("block-sites-btn").innerText = "Start Timer";
+      document.getElementById("skip-break-btn").style.display = "none";
+      document.getElementById("reset-timer-btn").style.display = "initial";
+      hideTimer();
+      showURLSection();
+      document.getElementById("pause-resume-btn").disabled = true;
+    }
+  }
+  
+  chrome.storage.sync.get(["pausedTime", "onBreak"], function (result) {
+    if (
+      result.pausedTime !== "resumed" &&
+      result.pausedTime !== undefined &&
+      result.pausedTime !== null
+    ) {
+      //get from background script
+      displayPausedTime(result.pausedTime);
+      chrome.storage.sync.get(["showAddressList"], function (result) {
+        if (result.showAddressList) {
+          showURLSection();
+          document.getElementById("toggle-address-list").style.fill =
+            "#da4567";
         } else {
-          chrome.storage.sync.get(["onBreak"], function (result) {
-            if (result.onBreak) {
-              document.getElementById("pause-resume-btn").innerText =
-                "Pause Break";
-              document.getElementById("skip-break-btn").style.display =
-                "initial;";
-            } else {
-              document.getElementById("pause-resume-btn").innerText =
-                "Pause Timer";
-              document.getElementById("skip-break-btn").style.display = "none";
-            }
-          });
+          hideURLSection();
+          document.getElementById("toggle-address-list").style.fill =
+            "initial";
+        }
+      });
+
+      chrome.storage.sync.get(["onBreak"], function (result) {
+        if (result.onBreak) {
+          document.getElementById("pause-resume-btn").innerText =
+            "Resume Break";
+        } else {
+          document.getElementById("pause-resume-btn").innerText =
+            "Resume Timer";
+        }
+      });
+    } else {
+      chrome.storage.sync.get(["onBreak", "timerStarted"], function (result) {
+        if (result.onBreak) {
+          document.getElementById("pause-resume-btn").innerText =
+            "Pause Break";
+          document.getElementById("skip-break-btn").style.display =
+            "initial;";
+          document.getElementById("reset-timer-btn").style.display = "none";
+        } else {
+          document.getElementById("pause-resume-btn").innerText =
+            "Pause Timer";
+          document.getElementById("skip-break-btn").style.display = "none";
+          // Only hide reset button if timer is actually started
+          if (result.timerStarted) {
+            document.getElementById("reset-timer-btn").style.display = "none";
+          } else {
+            document.getElementById("reset-timer-btn").style.display = "initial";
+          }
         }
       });
     }
@@ -257,119 +447,6 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   return true;
 });
 
-parentList.addEventListener("click", function (event) {
-  console.log(event);
-  if (event.target.tagName === "A") {
-    chrome.runtime.sendMessage(
-      { msg: event.target.parentNode.innerText.trim(), action: "deleteURL" },
-      function (response) {
-        if (response.msg === "success deleting url") {
-          var list = document.getElementsByTagName("li");
-          for (item of list) {
-            if (item.innerText === event.target.parentNode.innerText) {
-              item.parentNode.removeChild(item);
-              break;
-            }
-          }
-        } else if (response.msg === "error deleting url") {
-          console.log("ERROR deleting URL (handle somehow)");
-        }
-      }
-    );
-  }
-});
-
-pauseResumeBtn.addEventListener("click", function (event) {
-  if (event.target.innerText === "Resume Timer") {
-    document.getElementById("pause-resume-btn").innerText = "Pause Timer";
-    chrome.storage.sync.get(["pausedTime"], function (result) {
-      triggerTimer(globalTimer, true);
-    });
-    chrome.runtime.sendMessage(
-      {
-        msg: "resume",
-        action: "togglePause",
-      },
-      function (response) {
-        if (response.msg === "resumed") {
-          setDescription(true);
-        }
-      }
-    );
-  } else if (event.target.innerText === "Resume Break") {
-    document.getElementById("pause-resume-btn").innerText = "Pause Break";
-    chrome.storage.sync.get(["pausedTime"], function (result) {
-      triggerTimer(globalTimer, true);
-    });
-    chrome.runtime.sendMessage(
-      {
-        msg: "resume",
-        action: "togglePause",
-      },
-      function (response) {
-        if (response.msg === "resumed") {
-          setDescription(true);
-        }
-      }
-    );
-  } else {
-    if (event.target.innerText === "Pause Break") {
-      document.getElementById("pause-resume-btn").innerText = "Resume Break";
-    } else {
-      document.getElementById("pause-resume-btn").innerText = "Resume Timer";
-    }
-    document.getElementById(
-      "description"
-    ).innerHTML = `<img class="status-icon" src="/img/pause.png" />The timer is <span class="highlight">paused.</span>`;
-    displayPausedTime(globalTimer);
-    chrome.runtime.sendMessage({
-      msg: "pause",
-      action: "togglePause",
-      pauseLength: globalTimer,
-    });
-  }
-});
-
-skipBreakBtn.addEventListener("click", function (event) {
-  $("#skip-break-btn").tooltip("hide");
-  chrome.storage.sync.set({ onBreak: false });
-  chrome.storage.sync.set({ timerStarted: true });
-  chrome.storage.sync.set({ breakStarted: false });
-  chrome.storage.sync.get(["breakCount"], function (result) {
-    let count = result.breakCount + 1;
-    chrome.storage.sync.set({ breakCount: count });
-  });
-  toggleStartStop();
-});
-
-statsBtn.addEventListener("mouseover", function (event) {
-  chrome.storage.sync.get(["completedPomodoros", "breakCount"], function (
-    result
-  ) {
-    statsBtn.setAttribute(
-      "title",
-      `Completed Pomodoros: ${result.completedPomodoros} Completed Breaks: ${result.breakCount}`
-    );
-    statsBtn.setAttribute(
-      "data-original-title",
-      `Completed Pomodoros: ${result.completedPomodoros} Completed Breaks: ${result.breakCount}`
-    );
-    $("#stats-btn").tooltip("show");
-  });
-});
-
-showAddressListBtn.addEventListener("click", function (event) {
-  toggleShowAddressList(function (result) {
-    if (result === true) {
-      showURLSection();
-      document.getElementById("toggle-address-list").style.fill = "#da4567";
-    } else {
-      hideURLSection();
-      document.getElementById("toggle-address-list").style.fill = "initial";
-    }
-  });
-});
-
 function untilLongBreak(callback) {
   chrome.storage.sync.get(["breakCount", "longBreakFreq"], function (result) {
     let breakCount = parseInt(result.breakCount) + 1;
@@ -403,22 +480,17 @@ function addURL(event) {
         action: "addURL",
       },
       function (response) {
-        if (response.msg === "success adding url") {
+        if (response && response.msg === "success adding url") {
           let addressBox = document.getElementById("address-box");
           addToList(addressBox.value);
           addressBox.value = "";
-        } else if (response.msg === "error adding url") {
+        } else if (response && response.msg === "error adding url") {
           console.log("ERROR adding URL (handle somehow)");
         }
       }
     );
   }
 }
-
-addURLBtn.addEventListener("click", addURL);
-document.getElementById("address-box").addEventListener("keyup", addURL);
-
-blockSitesBtn.addEventListener("click", toggleStartStop);
 
 function toggleStartStop() {
   chrome.storage.sync.get(
@@ -427,7 +499,8 @@ function toggleStartStop() {
       if (!result.timerStarted) {
         if (result.onBreak) {
           document.getElementById("block-sites-btn").innerText = "Stop Break";
-          document.getElementById("skip-break-btn").style.display = "initial;";
+          document.getElementById("skip-break-btn").style.display =
+            "initial;";
           document.getElementById("pause-resume-btn").disabled = true;
           if (result.showAddressList) {
             showURLSection();
@@ -443,6 +516,7 @@ function toggleStartStop() {
           setDescription(true);
           document.getElementById("block-sites-btn").innerText = "Stop Timer";
           document.getElementById("skip-break-btn").style.display = "none";
+          document.getElementById("reset-timer-btn").style.display = "none";
           if (result.showAddressList) {
             showURLSection();
             document.getElementById("toggle-address-list").style.fill =
@@ -459,11 +533,13 @@ function toggleStartStop() {
       } else {
         if (result.onBreak) {
           document.getElementById("block-sites-btn").innerText = "Start Break";
-          document.getElementById("skip-break-btn").style.display = "initial;";
+          document.getElementById("skip-break-btn").style.display =
+            "initial;";
           document.getElementById("pause-resume-btn").disabled = true;
         } else {
           document.getElementById("block-sites-btn").innerText = "Start Timer";
           document.getElementById("skip-break-btn").style.display = "none";
+          document.getElementById("reset-timer-btn").style.display = "initial";
           document.getElementById("pause-resume-btn").disabled = true;
         }
         // stopTimer();
@@ -490,23 +566,9 @@ function toggleStartStop() {
   });
 }
 
-resetTimerBtn.addEventListener("click", function () {
-  triggerTimer(null, false, true);
-});
-
-settingsBtn.addEventListener("click", function () {
-  openSettingsPage();
-});
-
 function openSettingsPage() {
-  window.open("/html/settings.html");
+  chrome.tabs.create({ url: "/html/settings.html" });
 }
-
-// function setTimerOnDesc() {
-//   document.getElementById(
-//     "description"
-//   ).innerHTML = `<span class="highlight">Focus</span> timer is running and websites entered are being blocked.`;
-// }
 
 function triggerTimer(length, isResume, isReset, startBreak) {
   chrome.runtime.sendMessage(
@@ -519,7 +581,7 @@ function triggerTimer(length, isResume, isReset, startBreak) {
     },
     function (response) {
       console.log(response);
-      if (response.msg === "timerStarted" || response.msg === "breakStarted") {
+      if (response && response.msg === "timerStarted" || response.msg === "breakStarted") {
         if (response.msg === "breakStarted") {
           chrome.storage.sync.get(["breakLength"], function (result) {
             if (devMode) {
@@ -528,12 +590,14 @@ function triggerTimer(length, isResume, isReset, startBreak) {
               convertToMinutes(result.breakLength * 60);
             }
           });
+          document.getElementById("block-sites-btn").innerText = "Stop Break";
         } else {
           if (devMode || isResume) {
             convertToMinutes(parseInt(length));
           } else {
             convertToMinutes(parseInt(length) * 60);
           }
+          document.getElementById("block-sites-btn").innerText = "Stop Timer";
         }
         showTimer();
         chrome.storage.sync.get(["showAddressList"], function (result) {
@@ -544,30 +608,22 @@ function triggerTimer(length, isResume, isReset, startBreak) {
           }
         });
         document.getElementById("pause-resume-btn").disabled = false;
-      } else if (response.msg === "timerReset") {
+      } else if (response && response.msg === "timerReset") {
         stopTimer();
         hideTimer();
         showURLSection();
         document.getElementById("block-sites-btn").innerText = "Start Timer";
         document.getElementById("skip-break-btn").style.display = "none";
+        document.getElementById("reset-timer-btn").style.display = "initial";
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
         setDescription();
-      } else if (response.msg === "timerStopped") {
+      } else if (response && response.msg === "timerStopped") {
         stopTimer();
         hideTimer();
         showURLSection();
 
         setDescription();
-        // chrome.storage.sync.get(["onBreak"], function (result) {
-        //   if (result.onBreak) {
-        //     document.getElementById("block-sites-btn").innerText =
-        //       "Start Break";
-        //   } else {
-        //     document.getElementById("block-sites-btn").innerText =
-        //       "Start Timer";
-        //   }
-        // });
         document.getElementById("pause-resume-btn").innerText = "Pause Timer";
         document.getElementById("pause-resume-btn").disabled = true;
       }
@@ -694,6 +750,7 @@ function convertToMinutes(currentTimeLeft) {
           document.getElementById("timer-display").innerHTML = "";
           document.getElementById("block-sites-btn").innerText = "Start Timer";
           document.getElementById("skip-break-btn").style.display = "none";
+          document.getElementById("reset-timer-btn").style.display = "initial";
           onPageLoad();
           timerStopped = true;
         }
@@ -757,10 +814,10 @@ function forceStopTimer() {
   showURLSection();
   document.getElementById("block-sites-btn").innerText = "Start Timer";
   document.getElementById("skip-break-btn").style.display = "none";
+  document.getElementById("reset-timer-btn").style.display = "initial";
   document.getElementById("block-sites-btn").disabled = true;
   document.getElementById("pause-resume-btn").innerText = "Pause Timer";
   document.getElementById("pause-resume-btn").disabled = true;
-  document.getElementById("reset-timer-btn").disabled = true;
 }
 
 function zeroOutDisplay() {
@@ -776,7 +833,6 @@ function stopTimer() {
 
 function showTimer() {
   document.getElementById("timer-container").style.display = "initial";
-  document.getElementById("reset-timer-btn").style.display = "none";
   document.getElementById("pause-resume-btn").style.display = "initial";
   document.getElementById("title-container").style.display = "none";
   document.getElementById("toggle-address-list").style.display = "initial";
@@ -784,7 +840,6 @@ function showTimer() {
 
 function hideTimer() {
   document.getElementById("timer-container").style.display = "none";
-  document.getElementById("reset-timer-btn").style.display = "initial";
   document.getElementById("pause-resume-btn").style.display = "none";
   document.getElementById("title-container").style.display = "flex";
   document.getElementById("toggle-address-list").style.display = "none";
@@ -806,6 +861,18 @@ function checkDefaultSettings() {
     }
   });
 
+  chrome.storage.sync.get(["onBreak"], function (result) {
+    if (result.onBreak === undefined) {
+      chrome.storage.sync.set({ onBreak: false });
+    }
+  });
+
+  chrome.storage.sync.get(["pausedTime"], function (result) {
+    if (result.pausedTime === undefined) {
+      chrome.storage.sync.set({ pausedTime: null });
+    }
+  });
+
   chrome.storage.sync.get(["breakLength"], function (result) {
     if (result.breakLength === undefined) {
       chrome.storage.sync.set({
@@ -821,14 +888,6 @@ function checkDefaultSettings() {
       });
     }
   });
-
-  // chrome.storage.sync.get(["disableBreaks"], function (result) {
-  //   if (result.disableBreaks) {
-  //     document.getElementById(
-  //       "description"
-  //     ).innerHTML = `<span class="highlight">Single Timer Mode</span> is on. Breaks are disabled but the normal timer works as expected.`;
-  //   }
-  // });
 
   chrome.storage.sync.get(["timerLength"], function (result) {
     if (result.timerLength === undefined) {

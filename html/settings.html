@@ -6,17 +6,11 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <link
       rel="stylesheet"
-      href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
-      integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh"
-      crossorigin="anonymous"
+        href="/lib/bootstrap4.min.css"
     />
 
     <link
-      href="https://fonts.googleapis.com/css2?family=Dosis:wght@500&display=swap"
-      rel="stylesheet"
-    />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Dosis:wght@500&family=Lato&display=swap"
+        href="/lib/dosis-fonts.css"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/settings-styles.css" />
@@ -188,32 +182,25 @@
           Write Review: Link coming soon
         </p>
         <p>
-          Version: 1.0
+          Version: 1.16
         </p>
 
-        <form
-          action="https://www.paypal.com/cgi-bin/webscr"
-          method="post"
-          target="_top"
+        <a
+          id="donate-btn"
+          href="https://www.paypal.com/donate/?hosted_button_id=QZ39NWWXK6CAG"
+          target="_blank"
+          title="PayPal - The safer, easier way to pay online!"
         >
-          <input type="hidden" name="cmd" value="_donations" />
-          <input type="hidden" name="business" value="GN8FU2E7Q8TTY" />
-          <input type="hidden" name="item_name" value="Pomegranate" />
-          <input type="hidden" name="currency_code" value="USD" />
-          <input
-            id="donate-btn"
-            type="image"
+          <img
             src="/img/donate-button.png"
             border="0"
-            name="submit"
-            title="PayPal - The safer, easier way to pay online!"
             alt="Donate with PayPal button"
           />
-        </form>
+        </a>
       </div>
     </div>
   </body>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <script src="/lib/jquery.min.js"></script>
+  <script src="/lib/bootstrap.min.js"></script>
   <script src="/js/settings.js"></script>
 </html>
