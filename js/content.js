@@ -1,61 +1,77 @@
-chrome.storage.sync.get(["addresses", "onBreak", "exclusiveMode"], function (
-  response
-) {
-  if (!response.onBreak || response.exclusiveMode) {
-    chrome.storage.sync.get(
-      ["timerStarted", "redirectEnabled", "redirectURL"],
-      function (result) {
-        if (result.timerStarted !== undefined || response.exclusiveMode) {
-          if (result.timerStarted || response.exclusiveMode) {
-            let addresses = JSON.parse(response.addresses);
-            console.log(location.href);
-            for (address of addresses) {
-              if (location.href.indexOf(address.toLowerCase()) !== -1) {
-                if (result.redirectEnabled) {
-                  // let notifOptions = {
-                  //   type: "basic",
-                  //   iconUrl: "/img/pom-128.png",
-                  //   title: "Pomegranate",
-                  //   message:
-                  //     location.href +
-                  //     " was redirected to " +
-                  //     result.redirectURL,
-                  //   buttons: [{ title: "Close" }],
-                  // };
+// Overlay-based blocking: background decides when to block, we render a full-screen overlay.
+console.log("Pomegranate content script loaded");
 
-                  // chrome.notifications.create(notifOptions, function (id) {});
+let pomegranateOverlayActive = false;
+let pomegranateStateCheckInterval = null;
 
-                  chrome.runtime.sendMessage(
-                    {
-                      action: "showRedirectNotif",
-                      original: location.href,
-                      redirectURL: result.redirectURL,
-                    },
-                    function (response) {
-                      if (response.msg === "notif-success") {
-                        if (
-                          result.redirectURL.substring(0, 8) === "https://" ||
-                          result.redirectURL.substring(0, 7) === "http://"
-                        ) {
-                          window.location.replace(result.redirectURL);
-                        } else {
-                          window.location.replace("//" + result.redirectURL);
-                        }
-                      }
-                    }
-                  );
-                } else {
-                  window.location = chrome.runtime.getURL(
-                    "/html/pageBlocked.html"
-                  );
-                }
-              }
-            }
-          }
-        } else {
-          chrome.storage.sync.set({ timerStarted: false });
-        }
-      }
-    );
+function createOverlay() {
+  if (pomegranateOverlayActive) return;
+  pomegranateOverlayActive = true;
+
+  const style = document.createElement("style");
+  style.id = "pomegranate-overlay-style";
+  style.textContent = `
+    #pomegranate-overlay-root { position: fixed; inset: 0; z-index: 2147483647; }
+    #pomegranate-overlay-root iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  `;
+  document.documentElement.appendChild(style);
+
+  const root = document.createElement("div");
+  root.id = "pomegranate-overlay-root";
+  root.setAttribute("role", "dialog");
+  const iframe = document.createElement("iframe");
+  try {
+    iframe.src = chrome.runtime.getURL("/html/pageBlocked.html");
+  } catch (e) {
+    iframe.src = "about:blank";
   }
-});
+  iframe.setAttribute("sandbox", "allow-scripts allow-same-origin");
+  root.appendChild(iframe);
+
+  // Prevent interaction with the underlying page
+  const stop = function (e) { e.stopPropagation(); e.preventDefault(); };
+  root.addEventListener("click", stop, true);
+  root.addEventListener("mousedown", stop, true);
+  root.addEventListener("keydown", stop, true);
+
+  document.documentElement.appendChild(root);
+
+  // Periodically check timer state; remove overlay when not focusing
+  if (pomegranateStateCheckInterval) clearInterval(pomegranateStateCheckInterval);
+  pomegranateStateCheckInterval = setInterval(function () {
+    try {
+      chrome.runtime.sendMessage({ action: "getTimerState" }, function (resp) {
+        if (!resp) return;
+        const isFocus = (resp.isRunning && !resp.onBreak) || !!resp.exclusiveMode;
+        if (!isFocus) {
+          removeOverlay();
+        }
+      });
+    } catch (e) {
+      // ignore
+    }
+  }, 1000);
+}
+
+function removeOverlay() {
+  const root = document.getElementById("pomegranate-overlay-root");
+  const style = document.getElementById("pomegranate-overlay-style");
+  if (root && root.parentNode) root.parentNode.removeChild(root);
+  if (style && style.parentNode) style.parentNode.removeChild(style);
+  pomegranateOverlayActive = false;
+  if (pomegranateStateCheckInterval) {
+    clearInterval(pomegranateStateCheckInterval);
+    pomegranateStateCheckInterval = null;
+  }
+}
+
+// Listen for background command to show overlay
+try {
+  chrome.runtime.onMessage.addListener(function (request) {
+    if (request && request.action === "pomegranate_showOverlay") {
+      createOverlay();
+    } else if (request && request.action === "pomegranate_hideOverlay") {
+      removeOverlay();
+    }
+  });
+} catch (e) {}

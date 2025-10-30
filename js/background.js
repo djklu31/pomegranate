@@ -146,10 +146,11 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
     return true;
   }
   if (request.action === "getTimerState") {
-    chrome.storage.sync.get(["timerStarted", "onBreak"], function(result) {
+    chrome.storage.sync.get(["timerStarted", "onBreak", "exclusiveMode"], function(result) {
       sendResponse({ 
         isRunning: result.timerStarted && currentTime !== false,
-        onBreak: result.onBreak 
+        onBreak: result.onBreak,
+        exclusiveMode: !!result.exclusiveMode
       });
     });
     return true;
@@ -343,6 +344,60 @@ function timerEnded() {
 
 function startTimer(speed, length) {
   chrome.storage.sync.set({ timerStarted: true });
+  // If we just entered focus (not on break), immediately block any already-open blocked tabs
+  try {
+    chrome.storage.sync.get([
+      "onBreak",
+      "exclusiveMode",
+      "addresses",
+      "redirectEnabled",
+      "redirectURL",
+    ], function (cfg) {
+      const isFocusTime = (!cfg.onBreak) || !!cfg.exclusiveMode;
+      if (!isFocusTime) return;
+
+      let addresses = [];
+      try { addresses = cfg.addresses ? JSON.parse(cfg.addresses) : []; } catch (e) { addresses = []; }
+      if (!Array.isArray(addresses) || addresses.length === 0) return;
+
+      chrome.tabs.query({}, function (tabs) {
+        if (!tabs) return;
+        for (let tab of tabs) {
+          if (!tab || !tab.url) continue;
+          const url = String(tab.url);
+          if (
+            url.startsWith("chrome-extension://") ||
+            url.startsWith("chrome://") ||
+            url.startsWith("edge://") ||
+            url.startsWith("about:") ||
+            url.indexOf("/html/pageBlocked.html") !== -1
+          ) {
+            continue;
+          }
+          const lowerUrl = url.toLowerCase();
+          let isBlocked = false;
+          for (let a of addresses) {
+            const needle = String(a || "").toLowerCase();
+            if (needle && lowerUrl.indexOf(needle) !== -1) { isBlocked = true; break; }
+          }
+          if (!isBlocked) continue;
+
+          const REDIRECT_DELAY_MS = 150;
+          if (cfg.redirectEnabled) {
+            let target = cfg.redirectURL || "";
+            if (!target) continue;
+            if (!(target.startsWith("http://") || target.startsWith("https://"))) {
+              target = "//" + target;
+            }
+            setTimeout(function () { chrome.tabs.update(tab.id, { url: target }); }, REDIRECT_DELAY_MS);
+          } else {
+            // Show overlay instead of navigating away, so URL remains the same
+            setTimeout(function () { chrome.tabs.sendMessage(tab.id, { action: "pomegranate_showOverlay" }); }, REDIRECT_DELAY_MS);
+          }
+        }
+      });
+    });
+  } catch (e) {}
   stopTimer(timer, true);
   timer = setInterval(function () {
     //stop all previous timers if a new one is started
@@ -487,6 +542,132 @@ function closeTimerEndedWindows() {
           chrome.tabs.remove(tab.id);
         }
       }
+    }
+  });
+}
+
+// Core handler used by both webNavigation and tabs.onUpdated fallback
+// Simple de-dupe so we don't double-handle committed+completed
+const lastHandledByTab = {};
+
+function handleNavigationCompleted(details) {
+  // main frame only
+  if (details.frameId !== 0) return;
+
+  const url = details.url || "";
+
+  // ignore extension and chrome internal pages
+  if (
+    url.startsWith("chrome-extension://") ||
+    url.startsWith("chrome://") ||
+    url.startsWith("edge://") ||
+    url.startsWith("about:")
+  ) {
+    return;
+  }
+
+  // avoid loops when we're already on the blocked page
+  if (url.indexOf("/html/pageBlocked.html") !== -1) {
+    return;
+  }
+
+  // de-dupe within a short window per tab+url
+  try {
+    const key = details.tabId + "::" + url;
+    const now = Date.now();
+    const prev = lastHandledByTab[key];
+    if (prev && now - prev < 1000) {
+      return;
+    }
+    lastHandledByTab[key] = now;
+  } catch (e) {}
+
+  chrome.storage.sync.get(
+    [
+      "addresses",
+      "onBreak",
+      "exclusiveMode",
+      "timerStarted",
+      "redirectEnabled",
+      "redirectURL",
+    ],
+    function (cfg) {
+      const isFocusTime = (!!cfg.timerStarted && !cfg.onBreak) || !!cfg.exclusiveMode;
+      if (!isFocusTime) return;
+
+      let addresses = [];
+      try {
+        if (cfg.addresses !== undefined) {
+          addresses = JSON.parse(cfg.addresses) || [];
+        }
+      } catch (e) {
+        addresses = [];
+      }
+
+      const lowerUrl = url.toLowerCase();
+      let isBlocked = false;
+      for (let address of addresses) {
+        if (!address) continue;
+        const needle = String(address).toLowerCase();
+        if (needle && lowerUrl.indexOf(needle) !== -1) {
+          isBlocked = true;
+          break;
+        }
+      }
+
+      if (!isBlocked) return;
+
+      // Optionally store intended URL for diagnostics (not shown in UI)
+      const intendedKey = "intended:" + details.tabId;
+      const blockedAtKey = "blockedAt:" + details.tabId;
+      chrome.storage.session.set({ [intendedKey]: url, [blockedAtKey]: Date.now() });
+
+      // Decide target: external redirect or internal blocked page
+      const REDIRECT_DELAY_MS = 150; // small delay helps Chrome treat back as a normal step
+      if (cfg.redirectEnabled) {
+        let target = cfg.redirectURL || "";
+        if (!target) return;
+        if (!(target.startsWith("http://") || target.startsWith("https://"))) {
+          target = "//" + target;
+        }
+        // Update tab (preserves history). Delay reduces back-skip on Chrome.
+        setTimeout(function () {
+          // Re-check focus state to avoid redirecting after timer ends during delay
+          chrome.storage.sync.get(["timerStarted", "onBreak", "exclusiveMode"], function (s) {
+            const stillFocus = (!!s.timerStarted && !s.onBreak) || !!s.exclusiveMode;
+            if (!stillFocus) return;
+            chrome.tabs.update(details.tabId, { url: target });
+          });
+        }, REDIRECT_DELAY_MS);
+      } else {
+        // Use overlay on the actual page (preserves history and URL)
+        setTimeout(function () {
+          chrome.storage.sync.get(["timerStarted", "onBreak", "exclusiveMode"], function (s) {
+            const stillFocus = (!!s.timerStarted && !s.onBreak) || !!s.exclusiveMode;
+            if (!stillFocus) return;
+            chrome.tabs.sendMessage(details.tabId, { action: "pomegranate_showOverlay" });
+          });
+        }, REDIRECT_DELAY_MS);
+      }
+    }
+  );
+}
+
+// Prefer onCommitted (fires earlier) for faster block while preserving history
+if (chrome.webNavigation && chrome.webNavigation.onCommitted) {
+  chrome.webNavigation.onCommitted.addListener(function (details) {
+    handleNavigationCompleted(details);
+  });
+} else {
+  // Fallback for environments where webNavigation is unavailable
+  chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
+    // Trigger as early as possible when loading begins; small timeout allows commit
+    if (changeInfo.status === "loading" && tab && tab.url) {
+      setTimeout(function () {
+        handleNavigationCompleted({ frameId: 0, url: tab.url, tabId: tabId });
+      }, 0);
+    } else if (changeInfo.status === "complete" && tab && tab.url) {
+      handleNavigationCompleted({ frameId: 0, url: tab.url, tabId: tabId });
     }
   });
 }

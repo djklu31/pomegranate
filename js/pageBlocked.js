@@ -332,3 +332,4 @@ let randomNum = Math.floor(Math.random() * quotesMap.length);
 
 document.getElementById("quote").innerHTML = quotesMap[randomNum].quote;
 document.getElementById("author").innerText = quotesMap[randomNum].author;
+

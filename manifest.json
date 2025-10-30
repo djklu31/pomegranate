@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pomegranate",
-  "version": "1.16",
+  "version": "1.17",
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -21,7 +21,8 @@
     "48": "/img/pom-48.png",
     "128": "/img/pom-128.png"
   },
-  "permissions": ["storage", "tabs", "notifications"],
+  "permissions": ["storage", "tabs", "notifications", "webNavigation"],
+  "host_permissions": ["<all_urls>"],
   "web_accessible_resources": [
     {
       "resources": [
