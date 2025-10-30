@@ -92,9 +92,7 @@ svg:hover {
   fill: #da4567;
 }
 
-#reset-timer-btn {
-  margin-left: 1px;
-}
+
 
 #add-link-div {
   display: flex;
@@ -118,6 +116,10 @@ svg:hover {
 #toggle-address-list,
 #break-status-icon {
   width: 20px;
+}
+
+#stats-btn {
+  margin-left: 2px;
 }
 
 #settings-btn:hover,
@@ -181,6 +183,10 @@ svg:hover {
 }
 
 #pause-resume-btn {
+  margin-left: 1px;
+}
+
+#reset-timer-btn {
   margin-left: 1px;
 }
 

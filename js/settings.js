@@ -305,3 +305,5 @@ function stopTimerBG() {
     action: "toggleTimer",
   });
 }
+
+
